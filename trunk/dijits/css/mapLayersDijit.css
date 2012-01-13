@@ -1,0 +1,30 @@
+ .layers_rounded_corners{
+	-o-border-radius:3px;
+	-moz-border-radius:3px;
+	-webkit-border-radius:3px;
+	-border-radius:3px;
+ }
+ ._dynamicLayersDiv,._baseLayersDiv {
+        border: solid 1px #7EABCD;
+		padding: 0px 0px 0px 2px;
+        background-color:white;
+		color:peru;
+		font-size:13pt; 
+		text-align:left;
+		/*width:95%;*/
+		font-family:Geneva,Arial,Helvetica,sans-serif;
+      }
+.dynamic_map_service_item{
+	font-size:11pt;
+	border: solid 1px #7EABCD;
+	margin:4px;
+	padding:2px;
+}
+.dynamic_map_layer_item{
+	  	font-size:9pt;
+		position:relative;left:10px;
+		width:90%;
+	  }
+.tiled_map_layer_item{
+	  	font-size:9pt;
+	  }
