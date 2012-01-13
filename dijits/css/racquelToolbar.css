@@ -1,0 +1,68 @@
+.racquel-tools-container{
+	width:80px;
+	top:46px;
+	font-family:Geneva,Arial,Helvetica,sans-serif;
+}
+.sidebar{
+	height:30px;
+	position:absolute;
+	right:0px;
+	z-index:100;
+	border:0px;
+	overflow:hidden;
+}
+.sidebar-items-container{
+	width:500px;
+	position:absolute;
+	z-index:105;
+}
+.sidebar .btn {
+	margin-top: 2px;
+    width: 24px;
+    height: 24px;
+	z-index: 102;
+} 
+.sidebar .sidebar-label {
+	color: black;
+	font-size: medium;
+	font-weight: bold;
+	vertical-align: middle;
+}
+.sidebar .sidebar-background {
+	width: 320px;
+	height: 28px;
+	z-index: -1;
+	top: 0px;
+	left: 0px;
+}
+.sidebar .sidebar-arrow{
+	margin-top: 7px;
+	margin-left: 5px;
+	margin-right: 7px;
+}
+.toolbar-items{
+	position: absolute;
+	left: 28px;
+	top: 0px;
+}
+.selectVarsIcon {
+    background-image: url(../images/identify.png);
+    background-repeat: no-repeat;
+    width: 18px;
+    height: 18px;
+    text-align: center;
+} 
+.interactiveSearchIcon {
+    background-image: url(../images/identify.png);
+    background-repeat: no-repeat;
+    width: 18px;
+    height: 18px;
+    text-align: center;
+} 
+.batchSearchIcon {
+    background-image: url(../images/identify.png);
+    background-repeat: no-repeat;
+    width: 18px;
+    height: 18px;
+    text-align: center;
+} 

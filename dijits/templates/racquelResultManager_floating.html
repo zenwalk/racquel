@@ -1,0 +1,66 @@
+<div class = "racqueldijit-container">
+	<div dojoType = "dojox.layout.Dock" id="dock"></div>
+	<div dojoType = "dojox.layout.FloatingPane"
+		title="RACQUEL Result Manager"
+		dockTo="dock"
+		class="racqueldijit-floatingpane"
+		dojoAttachPoint = "floatingWindow"
+		dockable="true"
+		closable="false"
+		resizable="false"
+		hasShadow="true"
+		style="visibility:visible;"
+	>
+		<div dojoType="dijit.layout.ContentPane" dojoAttachPoint = "fpContent" style="width:100%;height:100%">
+		
+		<div style="height:15%">
+			<span style="width:40%;">
+				RACQUEL Results 
+			</span>
+			<span>
+			<input dojotype = 'dijit.form.Button' title='Select all results' label='All' dojoAttachPoint='_btnSelectAll'>
+			<input dojotype = 'dijit.form.Button' title='Clear selection' label='None' dojoAttachPoint='_btnSelectNone'>
+			<input dojotype = 'dijit.form.Button' title='Delete selected results' label='Delete' dojoAttachPoint='_btnDeleteSelected'>
+			<!--<input dojotype = 'dijit.form.Button' title='Zoom to selected results' label='Zoom' dojoAttachPoint='_btnZoomSelected'>-->
+			<input dojotype = 'dijit.form.Button' title='Save selected results' label='Save' dojoAttachPoint='_btnSaveSelected'>
+			<input dojotype = 'dijit.form.Button' title='Export selected results' label='Export' dojoAttachPoint='_btnExportSelected'>
+			</span>
+		</div>
+			<!-- grid here -->
+            <table dojoType="dojox.grid.DataGrid" dojoAttachPoint = "_grid" title = "Search results" style="width:100%;height:85%"
+			 rowSelector="20px">
+			    <thead>
+                    <tr>
+                        <!--<th field="SearchId" width="20px" formatter="_getGridCheckBox" canSort="false">
+                            &nbsp
+                        </th>-->
+                        <th field="River" width="75px">
+                            River
+                        </th>
+                        <th field="Location" formatter="_getGridCoords" width="75px">
+                            Coords
+                        </th>
+                        <th field="Site" formatter="_getGridYesNoText" width="30px">
+                            Site?
+                        </th>
+                        <th field="Route" formatter="_getGridYesNoText" width="40px">
+                            Route?
+                        </th>
+                        <th field="Catchment" formatter="_getGridYesNoText" width="65px">
+                            Catchment?
+                        </th>
+                        <th field="_item" formatter="_getGridShowHideBox" width="25px" canSort="false">
+                            Map
+                        </th>
+                        <th field="SearchId" formatter="_getShowDetailsButton" canSort="false" width="50px">
+                            Details
+                        </th>
+						<th field="SearchId" formatter="_getZoomToButton" width="100%" canSort="false">
+							Zoom
+						</th>
+                    </tr>
+                </thead>
+            </table>	
+		</div>
+		</div>
+</div>

@@ -1,0 +1,43 @@
+<div id="racquelControlDijit">
+<div dojoType = "dijit.Dialog"  dojoAttachPoint = "_ControlDijitDialog" id = "testdialog" title = "RACQUEL Setup"  >
+<div dojoType = "dijit.layout.ContentPane" dojoAttachPoint = "_ControlDijitContent" id="ctlContent">
+	Please use the checkboxes below to choose what type of RACQUEL Searches you would like to run.
+	<div id="task_items">	
+	<input dojoType='dijit.form.CheckBox' class='task_item'  value=0 dojoAttachPoint = "_ControlDijitSite"/>
+	<label>	At-site info. Identify the properties relating to the input location itself. </label>
+		<br/>
+	<input dojoType='dijit.form.CheckBox' class='task_item' value=1 dojoAttachPoint = "_ControlDijitRoutes"/>
+	<label>	Routes. Find the source and mouth corresponding to the input location, and the route between them. </label>
+		<br/>
+	<input dojoType='dijit.form.CheckBox' class='task_item' dojoAttachPoint = "_ControlDijitCatchment"/>
+	<label>Catchment info. Find the catchment above the input location and extract catchment based information.</label>
+		<div id="racquel_catch_sub_tasks" style="position:relative;left:30px">
+			<input dojoType='dijit.form.CheckBox' class='ctm_sub_task_item' dojoAttachPoint = "_ControlDijitElev"/>
+			<label>Elevation - calculate the minimum, maximum, and mean elevation for the catchment.</label><br/>
+			<input dojoType='dijit.form.CheckBox' class='ctm_sub_task_item'  dojoAttachPoint = "_ControlDijitLCM"/>
+			<label>LCM2000 - summarise the proportion of the catchment covered by each Land Cover Map 2000 class.</label><br/>
+			<input dojoType='dijit.form.CheckBox' class='ctm_sub_task_item'  dojoAttachPoint = "_ControlDijitUpstream"/>
+			<label>Upstream length - calculate the total length of streams / rivers within the catchment.</label><br/>
+		</div>
+	</div>
+	<br/>
+	<div id="task_settings">
+	Other search settings:
+	<br/>	
+	<input dojoType='dijit.form.CheckBox' class='ctm_sub_task_item' value=2 dojoAttachPoint = "_ControlDijitQC"/>
+			Quality control - if route searches are also run, check that the source is within the catchment generated.
+	<br/>
+	<input dojoType='dijit.form.CheckBox' class='ctm_sub_task_item' value=2 dojoAttachPoint = "_ControlDijitNetLoc"/>
+			Use Network Location - if route searches are run then the input location will be snapped to the 
+			nearest point on the river network. If checked, this network location will be used instead of the 
+			original input for the other (site and catchment) searches - this will slow down searching as the 
+			route search needs to complete before other searches begin.
+	</div>
+	<div id="racquelControlButtons">
+		<input dojoAttachPoint="_racquelControlOKButton" dojoType = "dijit.form.Button" label = "OK">
+		<input dojoAttachPoint="_racquelControlCancelButton" dojoType = "dijit.form.Button" label= "Cancel">
+	</div>
+	
+</div>
+</div>
+</div>

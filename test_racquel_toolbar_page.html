@@ -1,0 +1,106 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html style="height:100%;width:100%;">
+	<head>
+		<title>RACQUEL Toolbar Test</title>
+		<style type="text/css">
+			html,body{
+				height:100%;width:100%;margin:0;padding:0;
+			}
+            body {
+                background-color: white;
+                overflow: hidden;
+                font-family = "Trebuchet MS"
+            }
+            .outlinedPane {
+                border: solid 1px #7EABCD;
+                background-color: white;
+                color: peru;
+                font-size: 10pt;
+                text-align: left;
+            }
+            .roundedCorners {
+                -moz-border-radius: 4px;
+            }
+		</style>
+		<link rel="stylesheet" type = "text/css" href="http://serverapi.arcgisonline.com/jsapi/arcgis/2.4/js/dojo/dijit/themes/soria/soria.css">
+		<link rel="stylesheet" type="text/css" href="http://serverapi.arcgisonline.com/jsapi/arcgis/2.4/js/dojo/dojox/layout/resources/FloatingPane.css">
+		<link rel="stylesheet" type="text/css" href="http://serverapi.arcgisonline.com/jsapi/arcgis/2.4/js/dojo/dojox/layout/resources/ResizeHandle.css">
+		<link rel="stylesheet" type="text/css" href="http://serverapi.arcgisonline.com/jsapi/arcgis/2.4/js/dojo/dojox/grid/resources/Grid.css">
+		<link rel="stylesheet" type="text/css" href="http://serverapi.arcgisonline.com/jsapi/arcgis/2.4/js/dojo/dojox/grid/resources/SoriaGrid.css">	
+		<link rel="stylesheet" type="text/css" href="dijits/css/racquelResultManager.css">
+		
+		<script type="text/javascript">
+			djConfig = {
+				parseOnLoad: true,
+				baseUrl: "./",
+				modulePaths: {"racquelDijits":"./dijits"},
+				isDebug:true,
+				debugAtAllCosts:true
+			}
+		</script>
+		
+		<script type="text/javascript" src="http://serverapi.arcgisonline.com/jsapi/arcgis/?v=2.4">
+		// load the arcGIS JSAPI v2.4 (and thus dojo, too)
+		</script>
+		
+		<script type="text/javascript">
+			dojo.require("racquelDijits.racquelToolbarDijit");
+			dojo.require("racquelDijits.routeSearch");
+			dojo.require("racquelDijits.catchmentSearch");
+			dojo.require("racquelDijits.siteSearch")
+			dojo.require("dojo.parser");
+			dojo.require("dijit.layout.BorderContainer");
+    		dojo.require("dijit.layout.ContentPane");
+			dojo.require("esri.map");
+			
+			var map,resultDijit,osgb,racquelToolbar,racquelSiteDijit,racquelRouteDijit,racquelCatchDijit,clickPointSymbol;
+			
+			function init(){
+				osgb = new esri.SpatialReference({
+					wkid:27700
+				});
+				var initExtent = new esri.geometry.Extent(0,0,700000,1300000,osgb);
+				map = new esri.Map("mapDiv",{
+					extent: initExtent,
+					logo:false,
+					displayGraphicsOnPan: navigator.appName != 'Microsoft Internet Explorer'
+					// try using dojo.isIE for this?
+				});
+			//	resultDijit = new racquelDijits.racquelToolbarDijit(map);
+				dojo.connect (map,"onLoad",initFunctionality);
+				var osUrl = "http://wlwin5.nwl.ac.uk/ArcGIS/rest/services/OSOpendata/OS_Opendata_Backdrop/MapServer";
+				osLayer = new esri.layers.ArcGISTiledMapServiceLayer(osUrl);
+				osLayer.setVisibility(false);
+				var coastUrl = "http://wlwin5.nwl.ac.uk/ArcGIS/rest/services/TileMapLayers/UK_Coastline_Vignetted/MapServer";
+				coastLayer = new esri.layers.ArcGISTiledMapServiceLayer(coastUrl);
+				var riversUrl = "http://wlwin5.nwl.ac.uk/ArcGIS/rest/services/TileMapLayers/UK_Rivers_Cached/MapServer";
+				riversLayer = new esri.layers.ArcGISTiledMapServiceLayer(riversUrl);
+				riversLayer.minScale = 100000;
+				map.addLayer(coastLayer);
+				map.addLayer(osLayer);
+				map.addLayer(riversLayer);
+			 clickPointSymbol = new esri.symbol.SimpleMarkerSymbol().setStyle(esri.symbol.SimpleMarkerSymbol.STYLE_CROSS).setSize(12).setColor(new dojo.Color([255, 0, 0, 1])).setOutline(new esri.symbol.SimpleLineSymbol(esri.symbol.SimpleLineSymbol.STYLE_SOLID, new dojo.Color([255, 0, 0]), 1));
+   
+				
+			}
+			function initFunctionality(){
+				racquelToolbar = new racquelDijits.racquelToolbarDijit({
+					map:map,
+					resultDiv:dojo.byId("resultDiv")
+				});
+				//document.body.appendChild(racquelToolbar.domNode);
+			}
+			dojo.addOnLoad(init);
+		</script>
+	</head>
+	<body class="soria">
+		<div dojotype = "dijit.layout.BorderContainer" design="headline" gutters="false" 
+		style="width:100%; height:100%">
+			<div id="resultDiv" class="roundedCorners outlinedPane"dojoType = "dijit.layout.ContentPane" style="height:25%" region="bottom">
+			</div>
+			<div id="mapDiv" class="roundedCorners outlinedPane"   style="height:100%;" region="center"></div>
+	<!--	<div id="racquelToolbar" dojoType="racquelDijits.racquelToolbarDijit" map="map"></div>-->
+		</div>
+		
+	</body>
+</html>

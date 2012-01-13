@@ -1,0 +1,74 @@
+.soria .dojoxGridHeader .dojoxGridCell .dijitButtonText  {
+	color:peru;
+	font-size:8pt;
+}
+.dojoxGrid table{
+	font-size:8pt;
+}
+.racqueldijit-floatingpane{
+	-moz-border-radius:4px;
+	-webkit-border-radius:4px;
+	position:absolute;
+	top:25px;left:550px;
+	width:525px !important;
+	height:250px !important;
+	z-index:99;
+}
+
+.dojoxFloatingPaneContent{
+	font-family: Geneva,Arial,Helvetica,sans-serif;
+	font-size:8pt;
+	color:peru;
+} 
+.dojoxFloatingPaneTitle{
+	color: #485C5A;
+    background-color: #B3DAFC;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size:10pt;
+    font-weight:bold;
+}
+#dock{
+        -moz-border-radius:4px;
+        -webkit-border-radius: 4px;
+        position:absolute;
+        border-style:none;
+        z-index:99;
+        top:10px;
+        right:20px;
+}
+.soria .dojoxDockNode {
+       -moz-border-radius:4px;
+        -webkit-border-radius:4px;
+        background:#B3DAFC ;
+        color:#485C5A;
+        font-family: Arial, Helvetica, sans-serif;  
+}
+.soria .dojoxDockRestoreButton {
+        background:url(http://serverapi.arcgisonline.com/jsapi/arcgis/2.4/js/dojo/dijit/themes/soria/images/spriteArrows.png) no-repeat -21px center;
+        width:7.2px;
+        height:14px;
+        overflow:hidden;
+        float:left;
+}
+.soria .dojoxDockTitleNode{
+        padding-left:4px;
+        padding-right:4px;
+}
+.Xnrfadijit-container {
+	font-family:Geneva,Arial,Helvetica,sans-serif;
+	    background-color:white;
+		color:peru;
+		font-size:10pt; 
+		text-align:left;
+		border: solid 1px #7EABCD;
+	padding: 5px;
+} 
+
+.Xnrfadijit-rounded-corner {
+	-o-border-radius: 10px;
+	-moz-border-radius: 12px;
+	-webkit-border-radius: 10px;
+	border-radius: 10px;
+	-moz-box-sizing: border-box; -opera-sizing: border-box; -webkit-box-sizing: border-box; -khtml-box-sizing: border-box; box-sizing: border-box;
+	overflow:hidden;
+} 

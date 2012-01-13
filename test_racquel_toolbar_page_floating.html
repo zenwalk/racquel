@@ -1,0 +1,192 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html style="height:100%;width:100%;">
+	<head>
+		<title>RACQUEL Toolbar Test</title>
+		<style type="text/css">
+	       	#splash /*not in stylesheet to show sooner*/
+		   	{
+        	    position: absolute; width: 100%; height: 100%; top: 0; left: 0;
+            	z-index: 10000;
+      		}
+			#introouter
+			{
+				position:absolute;
+				top:50%;
+				left:0px;
+				width:100%;
+				height:1px;
+				overflow:visible;
+			}
+			#introcontent{
+				width:500px;
+				height:300px;
+				margin-left:-250px;
+				position:absolute;
+				top:-150px;
+				left:50%;
+				-o-border-radius:3px;
+				-moz-border-radius:3px;
+				-webkit-border-radius:3px;
+				-border-radius:3px;
+				border: solid 1px #7EABCD;
+				padding: 0px 0px 0px 2px;
+        		background-color:white;
+				color:peru;
+				font-size:13pt; 
+				text-align:left;
+				font-family:Geneva,Arial,Helvetica,sans-serif;
+			}
+			#introtext{
+				
+			}
+			#throbber{
+				background: white url(images/loading-big.gif) no-repeat scroll center center;
+            	width:100%;height:25%;
+			}
+			html,body{
+				height:100%;width:100%;margin:0;padding:0;
+			}
+            body {
+                background-color: white;
+                overflow: hidden;
+                font-family = "Trebuchet MS"
+            }
+            .outlinedPane {
+                border: solid 1px #7EABCD;
+                background-color: white;
+                color: peru;
+                font-size: 10pt;
+                text-align: left;
+            }
+            .roundedCorners {
+                -moz-border-radius: 4px;
+            }
+			 #leftpane{
+        background-color:white;
+        color:peru;
+        border: solid 2px cornflowerblue;
+        width:30%;
+        overflow:hidden;
+      }
+				#coorddisplay{
+		position:absolute;
+		right:25px;
+		bottom:5px;
+		color:#333;
+		background-color:white;
+		z-index:50;
+	}
+		</style>
+		<link rel="stylesheet" type = "text/css" href="http://serverapi.arcgisonline.com/jsapi/arcgis/2.4/js/dojo/dijit/themes/soria/soria.css">
+		<link rel="stylesheet" type="text/css" href="http://serverapi.arcgisonline.com/jsapi/arcgis/2.4/js/dojo/dojox/layout/resources/FloatingPane.css">
+		<link rel="stylesheet" type="text/css" href="http://serverapi.arcgisonline.com/jsapi/arcgis/2.4/js/dojo/dojox/layout/resources/ResizeHandle.css">
+		<link rel="stylesheet" type="text/css" href="http://serverapi.arcgisonline.com/jsapi/arcgis/2.4/js/dojo/dojox/grid/resources/Grid.css">
+		<link rel="stylesheet" type="text/css" href="http://serverapi.arcgisonline.com/jsapi/arcgis/2.4/js/dojo/dojox/grid/resources/SoriaGrid.css">	
+		<link rel="stylesheet" type="text/css" href="dijits/css/racquelResultManager.css">
+		<link rel="stylesheet" type="text/css" href="dijits/css/racquelBatchDijit.css">
+		<link rel="stylesheet" type="text/css" href="dijits/css/mapLayersDijit.css">
+		
+		<script type="text/javascript">
+			djConfig = {
+				parseOnLoad: true,
+				baseUrl: "./",
+				modulePaths: {"racquelDijits":"./dijits"},
+				isDebug:true,
+				debugAtAllCosts:true
+			}
+		</script>
+		
+		<script type="text/javascript" src="http://serverapi.arcgisonline.com/jsapi/arcgis/?v=2.4">
+		// load the arcGIS JSAPI v2.4 (and thus dojo, too)
+		</script>
+		
+		<script type="text/javascript">
+			dojo.require("racquelDijits.racquelToolbarDijit");
+			dojo.require("racquelDijits.mapLayersDijit");
+			dojo.require("dojo.parser");
+			dojo.require("dijit.layout.BorderContainer");
+    		dojo.require("dijit.layout.ContentPane");
+			dojo.require("esri.map");
+			
+			var map,osgb,racquelToolbar,mapLayers;
+			
+			function init(){
+				osgb = new esri.SpatialReference({
+					wkid:27700
+				});
+				var initExtent = new esri.geometry.Extent(0,0,700000,1300000,osgb);
+				map = new esri.Map("mapDiv",{
+					extent: initExtent,
+					logo:false,
+					displayGraphicsOnPan: navigator.appName != 'Microsoft Internet Explorer'
+					// try using dojo.isIE for this?
+				});
+				mapLayers = new racquelDijits.mapLayersDijit({
+					map: map
+				}).placeAt(dojo.byId("leftPane"));
+				mapLayers.startup();
+				// map onLoad will fire only when a layer is added. I.e. only when mapLayers dijit has loaded and added one!
+				dojo.connect (map,"onLoad",initFunctionality);
+			}
+			function initFunctionality(){
+				racquelToolbar = new racquelDijits.racquelToolbarDijit({
+					map:map
+				}).placeAt(dojo.byId("mapDiv"));
+				racquelToolbar.startup();
+				dojo.connect(map, "onMouseMove", showCoordinates);
+				dojo.connect(dijit.byId('mapDiv'),'resize',resizeMap);
+				// READY FOR ACTION - hide the splash screen
+				racquelToolbar._racquelWelcomeDialog.show();
+				setTimeout(function(){
+				dojo.fadeOut({node:"splash",duration:2000,onEnd:function(){
+					dojo.style("splash","display","none");
+					dojo.anim("mainWindow", {opacity:100},100);}}).play();
+				},1000);
+				racquelToolbar.showWelcomeDialog();
+			}
+			function resizeMap(){
+				var resizeTimer;
+				clearTimeout(resizeTimer);
+				resizeTimer = setTimeout(function(){
+					map.resize();
+					map.reposition();
+				}, 500);
+			}
+			function showCoordinates(evt){
+ 			   var mp = evt.mapPoint;
+    		dojo.byId("coorddisplay").innerHTML = Math.round(mp.x) + ", " + Math.round(mp.y);
+			}
+			//function show_racquel(){
+			//	dojo.byId("splash").style.display = "none";
+			//	dojo.anim(mapDiv, {opacity:100},100);
+			//}
+			dojo.addOnLoad(init);
+		</script>
+	</head>
+	<body class="soria">
+		<div id="splash">
+			<div id="introouter">
+			<div id="introcontent">
+			<div id="introtext">
+			RACQUEL - River And Catchment Query and Extraction Layer
+			<br/>
+			Harry Gibson - CEH Wallingford 2012
+			<br/>
+			RACQUEL is loading - please wait!
+			</div>
+			<div id="throbber"></div>
+			</div>
+			</div>
+		</div>
+		<div id="mainWindow" dojotype = "dijit.layout.BorderContainer" design="sidebar"
+		 gutters="false" liveSplitters="true" style="width:100%;height:100%;opacity:0;">
+		 	<div id="leftPane" class="roundedCorners outlinedPane" dojotype="dijit.layout.ContentPane" region="left"
+			 splitter="true" style="width:250px;">
+			</div>
+			<div id="mapDiv" dojotype = "dijit.layout.ContentPane" class="roundedCorners outlinedPane" region="center">
+			<span id="coorddisplay"></span>
+			</div>
+		</div>
+		
+	</body>
+</html>

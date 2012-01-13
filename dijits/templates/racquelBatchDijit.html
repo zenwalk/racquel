@@ -1,0 +1,24 @@
+<div id="racquelBatchDijit">
+<div dojoType = "dijit.Dialog" dojoAttachPoint = "_BatchSearchDialog" title="RACQUEL Batch Search">
+	<div dojoType="dijit.layout.ContentPane" class="outlinedMarginPane" dojoAttachPoint = "_dropZone">
+		Drag a CSV file here containing site coordinates. File should contain the following columns:
+		<br/>
+		"ID","X","Y","SITE","ROUTE","CATCHMENT"
+		<br/>
+		where ID is a unique identifier, X and Y are the coordinates in British National Grid,
+		<br/>
+		and SITE, ROUTE, and CATCHMENT contain "YES" or "NO" as appropriate.
+	</div>
+	<div dojoType="dijit.layout.ContentPane" class="outlinedMarginPane" dojoAttachPoint = "_gridZone">
+		<div dojoType="dojox.grid.DataGrid" dojoAttachPoint = "_grid" style="width:350px;height:200px;visibility:hidden;" query="{}" rowsPerPage="100"
+		>
+		</div>
+	</div>
+	
+	<div dojoType="dijit.layout.ContentPane" class="outlinedMarginPane" dojoAttachPoint = "_controls">
+		<input dojoAttachPoint="_batchGoButton" dojoType = "dijit.form.Button" disabled="true" label = "Run Searches">
+		<input dojoAttachPoint="_batchCancelButton" dojoType = "dijit.form.Button" disabled="true" label= "Cancel Searches">
+		<input dojoAttachPoint="_batchCloseButton" dojoType ="dijit.form.Button" label="Close">
+	</div>
+</div>
+</div>	

@@ -1,0 +1,138 @@
+<html>
+	<head>
+		<title>RACQUEL Toolbar Test</title>
+		<link rel="stylesheet" type = "text/css" href="http://serverapi.arcgisonline.com/jsapi/arcgis/2.4/js/dojo/dijit/themes/nihilo/nihilo.css">
+		<script type="text/javascript">
+			djConfig = {
+				parseOnLoad: true,
+				baseUrl: "./",
+				modulePaths: {"racquelDijits":"./dijits"},
+				isDebug:true,
+				debugAtAllCosts:true
+			}
+		</script>
+		
+		<script type="text/javascript" src="http://serverapi.arcgisonline.com/jsapi/arcgis/?v=2.4">
+		// load the arcGIS JSAPI v2.4 (and thus dojo, too)
+		</script>
+		
+		<script type="text/javascript">
+			//dojo.require("racquelDijits.racquelToolbarDijit");
+			dojo.require("racquelDijits.routeSearch");
+			dojo.require("racquelDijits.catchmentSearch");
+			dojo.require("racquelDijits.siteSearch")
+			dojo.require("dojo.parser");
+			
+			dojo.require("esri.map");
+			
+			var map,osgb,racquelToolbar,racquelSiteDijit,racquelRouteDijit,racquelCatchDijit,clickPointSymbol;
+			
+			function init(){
+				osgb = new esri.SpatialReference({
+					wkid:27700
+				});
+				var initExtent = new esri.geometry.Extent(0,0,700000,1300000,osgb);
+				map = new esri.Map("mapDiv",{
+					extent: initExtent,
+					logo:false,
+					displayGraphicsOnPan: navigator.appName != 'Microsoft Internet Explorer'
+					// try using dojo.isIE for this?
+				});
+				dojo.connect (map,"onLoad",initFunctionality);
+				var osUrl = "http://wlwin5.nwl.ac.uk/ArcGIS/rest/services/OSOpendata/OS_Opendata_Backdrop/MapServer";
+				osLayer = new esri.layers.ArcGISTiledMapServiceLayer(osUrl);
+				osLayer.setVisibility(false);
+				var coastUrl = "http://wlwin5.nwl.ac.uk/ArcGIS/rest/services/TileMapLayers/UK_Coastline_Vignetted/MapServer";
+				coastLayer = new esri.layers.ArcGISTiledMapServiceLayer(coastUrl);
+				var riversUrl = "http://wlwin5.nwl.ac.uk/ArcGIS/rest/services/TileMapLayers/UK_Rivers_Cached/MapServer";
+				riversLayer = new esri.layers.ArcGISTiledMapServiceLayer(riversUrl);
+				riversLayer.minScale = 100000;
+				map.addLayer(coastLayer);
+				map.addLayer(osLayer);
+				map.addLayer(riversLayer);
+			 clickPointSymbol = new esri.symbol.SimpleMarkerSymbol().setStyle(esri.symbol.SimpleMarkerSymbol.STYLE_CROSS).setSize(12).setColor(new dojo.Color([255, 0, 0, 1])).setOutline(new esri.symbol.SimpleLineSymbol(esri.symbol.SimpleLineSymbol.STYLE_SOLID, new dojo.Color([255, 0, 0]), 1));
+   
+				
+			}
+			function initFunctionality(){
+				//racquelToolbar = new racquelDijits.racquelToolbarDijit(map);
+				racquelRouteDijit = new racquelDijits.routeSearch();
+				racquelCatchDijit = new racquelDijits.catchmentSearch();
+				racquelSiteDijit = new racquelDijits.siteSearch();
+				//dojo.connect(map,"onClick",fireCatchmentSearch);
+				dojo.connect(map,"onClick",fireSiteSearch);
+				//document.body.appendChild(racquelToolbar.domNode);
+			}
+			function fireSiteSearch(evt){
+				var searchGeoPoint = new esri.geometry.Point(
+					evt.mapPoint.x,evt.mapPoint.y,evt.mapPoint.spatialReference
+				);
+				var searchId = new Date().getTime();
+				var searchGraphic = new esri.Graphic(searchGeoPoint, clickPointSymbol,{searchId:searchId});
+				var siteDeferred = racquelSiteDijit.runSiteSearch(searchGraphic);
+				siteDeferred.addCallbacks(siteSuccess,siteError);
+			}
+			function fireCatchmentSearch(evt){
+				var searchGeoPoint = new esri.geometry.Point(
+					evt.mapPoint.x,evt.mapPoint.y,evt.spatialReference
+				);
+				var searchId = new Date().getTime();
+				var searchGraphic = new esri.Graphic(searchGeoPoint,clickPointSymbol,{searchId:searchId});
+				var catchDeferred = racquelCatchDijit.runCatchmentSearch({
+					searchPoint: 	searchGraphic,
+					LCM2000:		true,
+					Elevation:		true,
+					UpstreamLength:	true,
+				});
+				catchDeferred.addCallbacks(catchSuccess,catchError);
+			}
+			function fireRouteSearch(evt){
+				var searchGeoPoint = new esri.geometry.Point(
+				evt.mapPoint.x,evt.mapPoint.y,evt.mapPoint.spatialReference);
+				var searchId = new Date().getTime();
+				var searchGraphic = new esri.Graphic(searchGeoPoint, clickPointSymbol,{searchId:searchId});
+				var routeDeferred = racquelRouteDijit.routeSearchDriver(searchGraphic);
+				//routeDeferred.then(function(routeRes){
+				//	alert("route results ready");
+				//});
+				routeDeferred.addCallbacks(routeSuccess,routeError);
+			}
+			function siteSuccess(siteResults){
+				console.log("site identify results ready");
+			}
+			function siteError(){
+				console.log("Error with site search");
+			}
+			function routeSuccess(results){
+				alert("route results ready");
+				console.log(results);
+				if (results.successful == true) {
+					map.graphics.add(results.source);
+					map.graphics.add(results.mouth);
+					map.graphics.add(results.sourceRoute);
+					map.graphics.add(results.mouthRoute);
+					map.graphics.add(results.riverSegment);
+				}
+				else{routeError();}
+			}
+			function catchSuccess(results){
+				console.log("catchment results ready");
+				console.log("LCM2000: "+results.lcm2k);
+				console.log("Elevation: "+results.elev);
+				console.log("Upstream: "+results.uplength);
+				map.graphics.add(results.catchment);
+			}
+			function catchError(results){
+				console.log("catchment search error");
+			}
+			function routeError(){
+				alert("route error!");
+			}
+			dojo.addOnLoad(init);
+		</script>
+	</head>
+	<body class="nihilo">
+		<div id="mapDiv" style="width:100%;height:100%"></div>
+	<!--	<div id="racquelToolbar" dojoType="racquelDijits.racquelToolbarDijit" map="map"></div>-->
+	</body>
+</html>
