@@ -41,17 +41,16 @@ dojo.declare("racquelDijits.racquelSearchDijit",[],{
 			// TODO - implement this. If set, wait for the routesearch to run and use its network location 
 			// for the catchment search
 		}
-		if (searchParams.doCatchmentQC){
-			// TODO - implement this. If set, wait for the routesearch to run and pass the source point from 
-			// it to the SourcePoint parameter of the catchment search. For now, implemented in the resultManager.
-		}
+		
+		// Catchment QC - implemented when a result is stored, not when a search is done.
+		
 		if (searchParams.doCatchment()){
-			
 			var catchSearchParams = {
 				searchPoint: searchGraphic,
-				LCM2000: searchParams.doLCM2K(),
-				Elevation: searchParams.doElev(),
-				UpstreamLength:searchParams.doUpstream()
+				extractionParams: searchParams.getCatchmentParams()
+				//LCM2000: searchParams.doLCM2K(),
+				//Elevation: searchParams.doElev(),
+				//UpstreamLength:searchParams.doUpstream()
 			};
 			var catchSearchDef = this.toolbar.racquelCatchDijit.runCatchmentSearch(catchSearchParams);
 			tasklist.push(catchSearchDef);

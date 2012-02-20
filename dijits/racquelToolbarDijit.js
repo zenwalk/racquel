@@ -14,7 +14,7 @@ dojo.require("racquelDijits.racquelSearchSettings");
 dojo.require("racquelDijits.racquelControlDijit");
 dojo.require("racquelDijits.racquelBatchDijit");
 dojo.require("racquelDijits.racquelMapSymbols");
-dojo.require("racquelDijits.racquelServiceUrls");
+dojo.require("racquelDijits.racquelServiceConfig");
 dojo.require("dojo.fx.easing");
 
 dojo.declare("racquelDijits.racquelToolbarDijit",[dijit._Widget, dijit._Templated],{
@@ -31,7 +31,7 @@ dojo.declare("racquelDijits.racquelToolbarDijit",[dijit._Widget, dijit._Template
 	racquelControlDijit: null,
 	racquelBatchDijit: null,
 	racquelMapSymbols: new racquelDijits.racquelMapSymbols(),
-	racquelServiceUrls: new racquelDijits.racquelServiceUrls(),
+	racquelServiceConfig: new racquelDijits.racquelServiceConfig(),
 	
 	constructor:function(params){
 		// racquelToolbar is interested in two paramaters that determine its behaviour: map, and resultDiv
@@ -39,51 +39,33 @@ dojo.declare("racquelDijits.racquelToolbarDijit",[dijit._Widget, dijit._Template
 		// first set up the things we always need regardless of parameters
 		// Result store: load results from last time, if there are any and the browser supports it
 		this.racquelResultStore = new racquelDijits.racquelResultStore();
-		if (window.localStorage && window.localStorage.getItem("racquelPersistedResults")) {
-		// needs work... storage does not retain functions on objects (some json rule) 
-		// so the graphics do not have functions like setAttributes when reloaded
-		// need to store some simplified representation and restore to that
-		// to do this convert each graphic using Graphic.toJson and restore by making new 
-		// graphic from that json
-		//	this.racquelResultStore.resultStore = dojo.fromJson(window.localStorage.getItem("racquelPersistedResults"));
-			console.log("RACQUEL: Results have been loaded from your previous visit");
-			var storedRes = window.localStorage.getItem("racquelPersistedResults");
-			this.racquelResultStore.addResultsFromStorageItem(dojo.fromJson(storedRes));
-		}
-		else {
-			console.log("RACQUEL: No persisted results found");
-			//this.racquelResultStore = new racquelDijits.racquelResultStore();
-		}
-		dojo.addOnUnload(window, dojo.hitch(this,function(){
-			if (this.racquelResultStore.getSearchIds().length>0){
-				console.log("Exiting page with results in grid. Will be saved for next time!");
-				if (window.localStorage){
-					window.localStorage.setItem("racquelPersistedResults",dojo.toJson(this.racquelResultStore.resultStore))
-				}
-			}
-			else {
-				// no results in the grid... maybe there were some from last time and user has now deleted them
-				// update the localStorage to reflect this
-				if (window.localStorage){
-					window.localStorage.removeItem("racquelPersistedResults");
-				}
-			}
-		}));
+		this.canDoBatchSearch = (window.File && window.FileReader);
+		this.canSaveResults = window.localStorage !== 'undefined';
+		
 		// always use a batch search dijit
 		this.racquelBatchDijit = new racquelDijits.racquelBatchDijit({racquelToolbar:this});
 		// we always need site, route, and catchment search dijits, but the site one can be instantiated with or 
 		// without a map.
 		// routeSearch and catchmentSearch do not care about map
-		this.racquelRouteDijit = new racquelDijits.routeSearch();
-		this.racquelCatchDijit = new racquelDijits.catchmentSearch();
+		this.racquelRouteDijit = new racquelDijits.routeSearch({
+			serviceConfig: this.racquelServiceConfig
+		});
+		this.racquelCatchDijit = new racquelDijits.catchmentSearch({
+			serviceConfig:this.racquelServiceConfig
+		});
 		if(params.map){
 			// Toolbar is in a webpage that contains a map. This means that interactive search can be enabled
 			// and we can also pass the map to the siteSearch dijit (used to set tolerance for search).
 			// We also need a main racquelSearchDijit, and an interactive variable chooser (racquelControlDijit) and 
 			// its associated racquelSearchSettings object 
-			this.racquelSiteDijit = new racquelDijits.siteSearch({map:params.map});
+			this.racquelSiteDijit = new racquelDijits.siteSearch({
+				map:params.map,
+				serviceConfig:this.racquelServiceConfig
+			});
 			this.racquelSearchDijit = new racquelDijits.racquelSearchDijit({map:map, racquelToolbar:this});
-			this.racquelInteractiveSettings = new racquelDijits.racquelSearchSettings(); // new object will be set to use all
+			this.racquelInteractiveSettings = new racquelDijits.racquelSearchSettings({
+				serviceConfig: this.racquelServiceConfig
+			}); // new object will be set to use all
 			this.racquelControlDijit = new racquelDijits.racquelControlDijit({racquelToolbar:this});
 			this.racquelControlDijit.startup();
 			// decide whether to render the resultGrid as a floating window or in a fixed container
@@ -103,7 +85,9 @@ dojo.declare("racquelDijits.racquelToolbarDijit",[dijit._Widget, dijit._Template
 			// This means that interactive search cannot be enabled and the siteSearch dijit 
 			// will use default search tolerances. This can be used for a basic batch-only search page
 			// The racquelSearchDijit will not have a map connected either.
-			this.racquelSiteDijit = new racquelDijits.siteSearch();
+			this.racquelSiteDijit = new racquelDijits.siteSearch({
+				serviceConfig:this.racquelServiceUrls.racquelSiteService
+			});
 			this.racquelSearchDijit = new racquelDijits.racquelSearchDijit({racquelToolbar:this});
 			// again the resultmanager can be fixed or floating
 			if(params.resultDiv){
@@ -120,6 +104,14 @@ dojo.declare("racquelDijits.racquelToolbarDijit",[dijit._Widget, dijit._Template
 		thisDijit = this;
 		this.racquelBatchDijit.startup();
 		this.racquelResultManager.startup();
+		dojo.addOnUnload(dojo.hitch(this,function(){
+			this._confirmUnload();
+		}));
+		//if (dojo.isWebKit){
+		//	document.body.onbeforeunload=dojo.hitch(this,function(){
+		//		this._confirmUnload();
+		//	});
+		//}
 	},
 	
 	setup: function(){
@@ -175,7 +167,83 @@ dojo.declare("racquelDijits.racquelToolbarDijit",[dijit._Widget, dijit._Template
 		this.racquelControlDijit.showDialog();
 	},
 	showWelcomeDialog:function(){
+		this.getLoadResultsContent();
 		this._racquelWelcomeDialog.show();
+	},
+	_confirmUnload:function(){
+		if (this.racquelResultStore.getSearchIds().length>0 && window.localStorage){
+				//var save = confirm("Bye! Would you like to save your results for next time?");
+				//if (save){
+					window.localStorage.setItem("racquelPersistedResults",dojo.toJson(this.racquelResultStore.resultStore));
+					console.log("saved");
+				//}
+			}
+			else {
+				// no results in the grid... maybe there were some from last time and user has now deleted them
+				// update the localStorage to reflect this
+				//alert("Bye!");
+			//	if (window.localStorage){
+			//		window.localStorage.removeItem("racquelPersistedResults");
+			//	}
+			}
+	},
+	getLoadResultsContent: function(){
+		var reloadPane = new dijit.layout.ContentPane({
+				
+		});
+		if (this.canSaveResults && window.localStorage.getItem("racquelPersistedResults")) { 
+			console.log("RACQUEL: Persisted results found");
+			var content = ("It seems like you've been here before! "+
+				"RACQUEL has found some results stored from a previous visit. Please click Reload "+
+				"if you'd like to reload these results, or New Session if you'd like to discard them.");
+			reloadPane.set('content',content);
+			var yesButton = new dijit.form.Button({
+				label: "Reload",
+				onClick: dojo.hitch(this, function(){
+					this._loadResults();
+					this._racquelWelcomeDialog.hide();
+				})
+			});
+			yesButton.startup();
+			var noButton = new dijit.form.Button({
+				label: "New Session",
+				onClick: dojo.hitch(this, function(){
+					this._racquelWelcomeDialog.hide();
+				})
+			});
+			noButton.startup();
+			dojo.place(yesButton.domNode,reloadPane.domNode,"last");
+			dojo.place(noButton.domNode,reloadPane.domNode,"last");
+			//reloadPane.appendChild(yesbutton.domNode);
+			//reloadPane.appendChild(nobutton.domNode);
+			//this._racquelWelcomeDialog.appendChild(reloadPane);
+		}
+		else {
+			var content = "No saved results found! Press New Session to start using RACQUEL";
+			reloadPane.set ("content",content);
+			var shooButton = new dijit.form.Button({
+				label: "New Session",
+				onClick: dojo.hitch(this, function(){
+					this._racquelWelcomeDialog.hide();
+				})
+			});
+			shooButton.startup();
+			dojo.place(shooButton.domNode,reloadPane.domNode,"last");
+		}
+		reloadPane.startup();
+		this._racquelReloadContent.set('content',reloadPane.domNode);
+		//dojo.place(reloadPane.domNode,this._racquelReloadContent.domNode);
+	},
+	_loadResults:function(){
+		// NOTE: localStorage does not retain functions on objects (some json rule), 
+		// so the graphics do not have functions like setAttributes when they are reloaded.
+		// Instead, store some simplified representation and restore to that.
+		// To do this convert each graphic using Graphic.toJson and restore by making new 
+		// graphic from that json
+		//this.racquelResultStore.resultStore = dojo.fromJson(window.localStorage.getItem("racquelPersistedResults"));
+		var storedRes = window.localStorage.getItem("racquelPersistedResults");
+		this.racquelResultStore.addResultsFromStorageItem(dojo.fromJson(storedRes));
+		console.log("RACQUEL: Results have been loaded from your previous visit");
 	},
 	toggleInteractiveSearch:function(){
 		if(this._btnToggleInteractive.checked){
@@ -188,7 +256,6 @@ dojo.declare("racquelDijits.racquelToolbarDijit",[dijit._Widget, dijit._Template
 		// i.e. behave as a tool like zoom, identify, etc
 		console.log("Activate interactive search");
 		this.racquelSearchDijit.enableInteractiveSearch();
-		//this.activateRACQUELInteractiveSearch();
 	},
 	disableInteractiveSearch:function(){
 		console.log("Disable interactive search");
@@ -200,7 +267,11 @@ dojo.declare("racquelDijits.racquelToolbarDijit",[dijit._Widget, dijit._Template
 	activateBatchSearch: function(){ // this function is called by onClick on the toolbar
 		// this will open a batch search dijit which will allow drag and drop of a csv file
 		// in HTML5 browsers and then run multiple racquel searches based on its contents
-		//this.showRACQUELBatchDijit();
+		if (!window.File || !window.FileReader){
+			alert("Your web browser doesn't support the necessary features for running a batch search. \n\r"+
+					"Please upgrade to Google Chrome (for best performance) or Firefox");
+			return;
+		}
 		console.log("Activate batch search");
 		this.disableInteractiveSearch();
 		this.racquelBatchDijit.showDialog();

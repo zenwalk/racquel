@@ -77,15 +77,15 @@
 		z-index:50;
 	}
 		</style>
-		<link rel="stylesheet" type = "text/css" href="http://serverapi.arcgisonline.com/jsapi/arcgis/2.4/js/dojo/dijit/themes/soria/soria.css">
-		<link rel="stylesheet" type="text/css" href="http://serverapi.arcgisonline.com/jsapi/arcgis/2.4/js/dojo/dojox/layout/resources/FloatingPane.css">
-		<link rel="stylesheet" type="text/css" href="http://serverapi.arcgisonline.com/jsapi/arcgis/2.4/js/dojo/dojox/layout/resources/ResizeHandle.css">
-		<link rel="stylesheet" type="text/css" href="http://serverapi.arcgisonline.com/jsapi/arcgis/2.4/js/dojo/dojox/grid/resources/Grid.css">
-		<link rel="stylesheet" type="text/css" href="http://serverapi.arcgisonline.com/jsapi/arcgis/2.4/js/dojo/dojox/grid/resources/SoriaGrid.css">	
+		<link rel="stylesheet" type = "text/css" href="http://serverapi.arcgisonline.com/jsapi/arcgis/2.6/js/dojo/dijit/themes/soria/soria.css">
+		<link rel="stylesheet" type="text/css" href="http://serverapi.arcgisonline.com/jsapi/arcgis/2.6/js/dojo/dojox/layout/resources/FloatingPane.css">
+		<link rel="stylesheet" type="text/css" href="http://serverapi.arcgisonline.com/jsapi/arcgis/2.6/js/dojo/dojox/layout/resources/ResizeHandle.css">
+		<link rel="stylesheet" type="text/css" href="http://serverapi.arcgisonline.com/jsapi/arcgis/2.6/js/dojo/dojox/grid/resources/Grid.css">
+		<link rel="stylesheet" type="text/css" href="http://serverapi.arcgisonline.com/jsapi/arcgis/2.6/js/dojo/dojox/grid/resources/SoriaGrid.css">	
 		<link rel="stylesheet" type="text/css" href="dijits/css/racquelResultManager.css">
 		<link rel="stylesheet" type="text/css" href="dijits/css/racquelBatchDijit.css">
 		<link rel="stylesheet" type="text/css" href="dijits/css/mapLayersDijit.css">
-		
+		<link rel="stylesheet" type="text/css" href="dijits/css/racquelToolbar.css">
 		<script type="text/javascript">
 			djConfig = {
 				parseOnLoad: true,
@@ -96,7 +96,7 @@
 			}
 		</script>
 		
-		<script type="text/javascript" src="http://serverapi.arcgisonline.com/jsapi/arcgis/?v=2.4">
+		<script type="text/javascript" src="http://serverapi.arcgisonline.com/jsapi/arcgis/?v=2.6">
 		// load the arcGIS JSAPI v2.4 (and thus dojo, too)
 		</script>
 		
@@ -107,7 +107,8 @@
 			dojo.require("dijit.layout.BorderContainer");
     		dojo.require("dijit.layout.ContentPane");
 			dojo.require("esri.map");
-			
+			esri.config.defaults.io.proxyUrl = "/proxy/proxy.ashx";
+	
 			var map,osgb,racquelToolbar,mapLayers;
 			
 			function init(){
@@ -138,7 +139,7 @@
 				// READY FOR ACTION - hide the splash screen
 				racquelToolbar._racquelWelcomeDialog.show();
 				setTimeout(function(){
-				dojo.fadeOut({node:"splash",duration:2000,onEnd:function(){
+				dojo.fadeOut({node:"splash",duration:1000,onEnd:function(){
 					dojo.style("splash","display","none");
 					dojo.anim("mainWindow", {opacity:100},100);}}).play();
 				},1000);
