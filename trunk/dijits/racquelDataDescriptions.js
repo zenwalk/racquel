@@ -2,7 +2,7 @@ dojo.provide("racquelDijits.racquelDataDescriptions");
 // this class is just a place to store dataset class mappings / descriptions
 // All properties are "static" i.e. same across all instantiations as they're not in constructor  
 dojo.declare("racquelDijits.racquelDataDescriptions", [], {
-    lcm2000: {
+    lcm2k: {
         name: "Land Cover Map 2000",
         id: "lcm2k",
 		source: "http://www.ceh.ac.uk/documents/lcm2000_raster_dataset_details.pdf",

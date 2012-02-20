@@ -4,43 +4,57 @@ dojo.require("dojo.DeferredList");
 dojo.declare("racquelDijits.routeSearch",[],{
 	constructor:function(params){
 		this.routeResults = {routeResults:null,location:null};
+		this.routeService = params.serviceConfig.racquelRouteService;
+		this.riverDataService = params.serviceConfig.racquelRiversDataService;
 		//this.mouthRouteSymbol = new esri.symbol.SimpleLineSymbol(esri.symbol.SimpleLineSymbol.STYLE_SOLID, new dojo.Color([255, 0, 0]), 2);
     	//this.sourceRouteSymbol = new esri.symbol.SimpleLineSymbol(esri.symbol.SimpleLineSymbol.STYLE_SOLID, new dojo.Color([0, 0, 255]), 2);
     	//this.mouthSymbol = new esri.symbol.SimpleMarkerSymbol(esri.symbol.SimpleMarkerSymbol.STYLE_CIRCLE, 12, new esri.symbol.SimpleLineSymbol(esri.symbol.SimpleLineSymbol.STYLE_SOLID, new dojo.Color([0, 0, 0]), 1), new dojo.Color([0, 255, 0]));
     	//this.sourceSymbol = new esri.symbol.SimpleMarkerSymbol(esri.symbol.SimpleMarkerSymbol.STYLE_DIAMOND, 12, new esri.symbol.SimpleLineSymbol(esri.symbol.SimpleLineSymbol.STYLE_SOLID, new dojo.Color([0, 0, 0]), 1), new dojo.Color([255, 0, 0]));
     	//this.locatedPointSymbol = new esri.symbol.SimpleMarkerSymbol().setStyle(esri.symbol.SimpleMarkerSymbol.STYLE_X).setSize(12).setColor(new dojo.Color([0, 255, 0, 1])).setOutline(new esri.symbol.SimpleLineSymbol(esri.symbol.SimpleLineSymbol.STYLE_SOLID, new dojo.Color([0, 255, 0]), 1));
 		//this.riversSymbol = new esri.symbol.SimpleLineSymbol().setStyle(esri.symbol.SimpleLineSymbol.STYLE_SOLID).setWidth(2).setColor(new dojo.Color([0, 255, 0, 1]));
-	
-    },
+	},
     _getSourceAndMouth: function(riverReach){
         // uses the source and mouth id encoded as attributes in the RACQUEL river link to get the corresponding
         // source, mouth, and tidal mouth point geometries; in turn these will be passed to the network analysis
         var pointsDef = new dojo.Deferred();
-        var dataUrl = "http://192.171.192.6/ArcGIS/rest/services/IRN/IRN_Data/MapServer";
-        var sourceLayer = "/0";
-        var mouthLayer = "/3";
-        var tideLayer = "/1";
+        var dataUrl = this.riverDataService.URL;
+        var sourceLayer = this.riverDataService.Sources.LayerNum;
+        var mouthLayer = this.riverDataService.Mouths.LayerNum;
+        var tideLayer = this.riverDataService.TidalMouths.LayerNum;
         var tasklist = [];
-        var sourceQueryTask = new esri.tasks.QueryTask(dataUrl + sourceLayer);
-        var mouthQueryTask = new esri.tasks.QueryTask(dataUrl + mouthLayer);
+        var sourceQueryTask = new esri.tasks.QueryTask(dataUrl + "/"+ sourceLayer);
+        var mouthQueryTask = new esri.tasks.QueryTask(dataUrl + "/" + mouthLayer);
         var query = new esri.tasks.Query();
         query.returnGeometry = true;
         // river line records number of its from-node. The from node, in turn, records the number of the source node.
         // so we could do two queries in turn but it is probably quicker over a network to encompass both into a single
         // where clause and let oracle deal with it. Does mean coding table name here though - maybe not ideal.
-        query.where = "SOURCEID_FULL = (SELECT SOURCENODE_FULL FROM NRFA_SDE.IRN_NODES WHERE NODEID_FULL = " +
-        riverReach.attributes.FNODE_FULL +
-        ")";
-        query.outFields = ["SOURCEID_FULL"];
-        console.log("executing source query with clause " + query.where);
+        query.where = this.riverDataService.Sources.IdField + " = (SELECT "+
+						this.riverDataService.Nodes.NodeSourceField + " FROM " +
+						this.riverDataService.Nodes.TableName + " WHERE " +
+						this.riverDataService.Nodes.IdField + " = " +
+						riverReach.attributes[this.riverDataService.RiverLines.FromField] + ")"
+		//query.where = "SOURCEID_FULL = (SELECT SOURCENODE_FULL FROM NRFA_SDE.IRN_NODES WHERE NODEID_FULL = " +
+        //riverReach.attributes.FNODE_FULL +
+        //")";
+		query.outFields = [this.riverDataService.Sources.IdField];
+        //query.outFields = ["SOURCEID_FULL"];
+        //console.log("executing source query with clause " + query.where);
         tasklist.push(sourceQueryTask.execute(query));
         // now do the mouth
-        query.where = "MOUTHID_FULL = (SELECT MOUTHNODE_FULL FROM NRFA_SDE.IRN_NODES WHERE NODEID_FULL = " +
-        riverReach.attributes.TNODE_FULL +
-        ")";
-        query.outFields = ["MOUTHID_FULL"];
-        console.log("executing mouth query with clause " + query.where);
+		query.where = this.riverDataService.Mouths.IdField + " = (SELECT "+
+						this.riverDataService.Nodes.NodeMouthField + " FROM " +
+						this.riverDataService.Nodes.TableName + " WHERE " +
+						this.riverDataService.Nodes.IdField + " = " +
+						riverReach.attributes[this.riverDataService.RiverLines.ToField] + ")"
+		//query.where = "MOUTHID_FULL = (SELECT MOUTHNODE_FULL FROM NRFA_SDE.IRN_NODES WHERE NODEID_FULL = " +
+        //riverReach.attributes.TNODE_FULL +
+        //")";
+        query.outFields = [this.riverDataService.Mouths.IdField];
+       	//query.outFields = ["MOUTHID_FULL"];
+        //console.log("executing mouth query with clause " + query.where);
         tasklist.push(mouthQueryTask.execute(query));
+		
         // use a deferredlist to handle waiting until all queries have done their thing
         var dl = new dojo.DeferredList(tasklist);
         dl.addCallback(dojo.hitch(this,function(res){
@@ -52,8 +66,7 @@ dojo.declare("racquelDijits.routeSearch",[],{
             //var mouthGraphic = new esri.Graphic(res[1][1].features[0].geometry, this.mouthSymbol, {});
             var sourceGraphic = new esri.Graphic(res[0][1].features[0].geometry, null, {});
             var mouthGraphic = new esri.Graphic(res[1][1].features[0].geometry, null, {});
-            
-			pointsDef.callback({
+   		pointsDef.callback({
                 source: sourceGraphic,
                 mouth: mouthGraphic
             });
@@ -72,7 +85,7 @@ dojo.declare("racquelDijits.routeSearch",[],{
 		var routeParams = new esri.tasks.RouteParameters();
 		routeParams.stops = new esri.tasks.FeatureSet();
 		routeParams.outSpatialReference = {"wkid":27700}; // TODO: get from map
-		var routeTask = new esri.tasks.RouteTask("http://192.171.192.6/ArcGIS/rest/services/IRN/IRN_Route_Service/NAServer/IRN_Route_Layer");
+		var routeTask = new esri.tasks.RouteTask(this.routeService.URL);
 		routeParams.stops.features.push(from);
 		routeParams.stops.features.push(to);
 		console.log("Searching for route from: ("+from.geometry.x+","+from.geometry.y+") to ("+
@@ -220,8 +233,10 @@ dojo.declare("racquelDijits.routeSearch",[],{
         // the node information. We are assuming that the network analysis will snap to the same reach...! 
         // The tolerance for snapping in the network layer service is set to 250m. So we do the same for this search.
         var sdoQuery = new esri.tasks.Query;
-        var sdoQueryTask = new esri.tasks.QueryTask("http://192.171.192.6/ArcGIS/rest/services/IRN/IRN_Data/MapServer/4");
-        sdoQuery.outFields = ["OS_NAME", "LENGTH", "STRAHLER", "SHREVE", "WORK_", "WORKTYPE", "FNODE_FULL", "TNODE_FULL"];
+		var queryURL = this.riverDataService.URL;
+		var queryLayer = this.riverDataService.RiverLines.LayerNum;
+        var sdoQueryTask = new esri.tasks.QueryTask(queryURL + "/" + queryLayer);
+        sdoQuery.outFields = this.riverDataService.RiverLines.FetchFields;
         sdoQuery.returnGeometry = true;
         var sdoResult;
         var point = searchPointGraphic.geometry;

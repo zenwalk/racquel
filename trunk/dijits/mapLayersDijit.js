@@ -21,24 +21,25 @@ dojo.declare("racquelDijits.mapLayersDijit",[dijit._Widget,dijit._Templated],{
 		// of dynamic map service URL / array of visible sublayers
 		this.dynamicLayerUrls = params.dynamicLayerUrls || [];
 		this.dynamicLayers = [];
+		var serverBase = "http://wlwater.ceh.ac.uk/ArcGIS/rest/services/";
 		// if none specified then use default. Specify in order they need to be added to map (lowest first)
 		if (this.baseLayerUrls.length ===0){
 			this.baseLayerUrls.push( 
-				{url:		"http://192.171.192.6/ArcGIS/rest/services/TileMapLayers/UK_Coastline_Vignetted/MapServer",
+				{url:		serverBase+"TileMapLayers/UK_Coastline_Vignetted/MapServer",
 				 name: 		"Coastline",
 				 visible:	true});
 			this.baseLayerUrls.push( 
-				{url:		"http://192.171.192.6/ArcGIS/rest/services/OSOpendata/OS_Opendata_Backdrop/MapServer",
+				{url:		serverBase+"OSOpendata/OS_Opendata_Backdrop/MapServer",
 				 name:		"OS Maps", 
 				visible:	false});
 			this.baseLayerUrls.push( 
-				{url:		"http://192.171.192.6/ArcGIS/rest/services/TileMapLayers/UK_Rivers_Cached/MapServer",
+				{url:		serverBase+"TileMapLayers/UK_Rivers_Cached/MapServer",
 				 name:		"Rivers",
 				 visible: true});
 		}
 		if (this.dynamicLayerUrls.length === 0){
 			this.dynamicLayerUrls.push( 
-				{url:		"http://192.171.192.6/ArcGIS/rest/services/NRFA_GIS/NRFA_Website_TempService/MapServer",
+				{url:		serverBase+"NRFA_GIS/NRFA_Website_TempService/MapServer",
 				name: 		"Standard NRFA layers",
 				visible:	[-1]});
 		}

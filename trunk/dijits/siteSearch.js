@@ -4,9 +4,12 @@ dojo.declare("racquelDijits.siteSearch",[],{
 	constructor:function(params){
 		params = params || {};
 		this.map = params.map || null
-		this.identifyServiceLoc = params.identifyService || "http://192.171.192.6/ArcGIS/rest/services/IRN/IRN_Polygon_Datasets/MapServer";
-		this.layerIds= [0,1,2,3,4,5,6,8,9,10,11,12,13,14,15,16,17];
-		this.layerOption= esri.tasks.IdentifyParameters.LAYER_OPTION_ALL;
+		this.identifyServiceLoc = params.serviceConfig.racquelSiteService.URL ||
+			"http://wlwater.ceh.ac.uk/ArcGIS/rest/services/IRN/IRN_Polygon_Datasets/MapServer"; // default
+		this.layerIds= params.serviceConfig.racquelSiteService.Layers || 
+			[0,1,2,3,4,5,6,8,9,10,11,12,13,14,15,16,17]; // default
+		this.layerOption= params.serviceConfig.racquelSiteService.LayerOption || 
+			esri.tasks.IdentifyParameters.LAYER_OPTION_ALL;
 	},
 	runSiteSearch:function(searchPointGraphic){
 		// Unlike Query Task, Identify Task uses a map to work out, from the visible extent, the tolerance 

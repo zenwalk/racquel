@@ -186,15 +186,24 @@ dojo.declare("racquelDijits.racquelBatchDijit",[dijit._Widget, dijit._Templated]
 			}
 		}));
 		// and do the first one to get it all going
+		this._searchIsCancelled = false;
 		this.runNextRow();
 	},
 	runNextRow:function(){
-		if (this._currentRow < this._totalRows){
-			this._runRowSearch(this._currentRow);
-			this._currentRow += 1;			
+		if (!this._searchIsCancelled) {
+			if ((this._currentRow < this._totalRows)) {
+				this._runRowSearch(this._currentRow);
+				this._currentRow += 1;
+			}
+			else {
+				this._searchesComplete();
+			}
 		}
 		else {
-			this._searchesComplete();
+			alert("Searches cancelled! /r/nSearch IDs can't be reused, "
+				+"so you'll need new ones if you want to re-run.");
+			this._batchCancelButton.disabled=true;
+			this._batchCloseButton.disabled=false;
 		}
 	},
 	_runRowSearch:function(rownum){
@@ -260,7 +269,7 @@ dojo.declare("racquelDijits.racquelBatchDijit",[dijit._Widget, dijit._Templated]
 		this._BatchSearchDialog.hide();
 	},
 	cancelSearch:function(){
-		
+		this._searchIsCancelled = true;
 	}
 	
 });

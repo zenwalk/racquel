@@ -15,10 +15,9 @@
 	</div>
 	<div dojotype = "dijit.Dialog" dojoAttachPoint = "_racquelWelcomeDialog" title="Welcome to RACQUEL">
 		<div dojotype = "dijit.layout.ContentPane" class = "outlinedMarginPane" dojoAttachPoint = "_racquelWelcomeContent">
-			Welcome to RACQUEL - the River and Catchment Query and Extraction Layer
-			<br/>
-			RACQUEL enables you to run three types of query:
-			<ul>
+			<div>Welcome to RACQUEL - the River and Catchment Query and Extraction Layer</div>
+			<div>RACQUEL enables you to run three types of query:
+			<div><ul>
 				<li>
 					At-site searches. Find out what is at the site of interest. (Similar to the Identify tool in a GIS)
 				</li>
@@ -32,16 +31,20 @@
 					the elevation, land cover (Land Cover Map 2000), and total upstream river length within the catchment
 				</li>
 			</ul>
+			</div>
+			</div>
+			<div>
 			All searches can be run in interactive or batch mode. To run an interactive search, first click "Variables"
 			in the toolbar then choose which searches you want to run. Then Click the Interactive Search tool, zoom in
 			to the site of interest, and click on the map.
-			<br/>
+			</div>
+			<div>
 			To run a batch search, click the Batch Search tool. You'll need a modern web browser like Firefox or Chrome.
 			Prepare a CSV file containing the sites of interest, as described in the tool. Drag it into the tool and press go.
+			</div>
 		</div>
 		<div dojotype = "dijit.layout.ContentPane" class = "outlinedMarginPane" dojoAttachPoint = "_racquelReloadContent">
-			It seems like you've been here before! RACQUEL has found some results stored from a previous visit. Please
-			click Reload if you'd like to reload these results, or New Session if you'd like to discard them.
+			
 		</div>
 	</div>
 </div>

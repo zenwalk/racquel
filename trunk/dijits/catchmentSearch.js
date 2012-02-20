@@ -2,40 +2,55 @@ dojo.provide("racquelDijits.catchmentSearch");
 
 dojo.declare("racquelDijits.catchmentSearch",[],{
 	constructor:function(params){
-		this.soeURL = "http://192.171.192.6/ArcGIS/rest/services/Test/irn_watershed_svc/MapServer/exts/WatershedSOE/createWatershed";
+		this.catchmentService = params.serviceConfig.racquelCatchmentService;
+		//this.soeURL = "http://192.171.192.6/ArcGIS/rest/services/Test/irn_watershed_svc/MapServer/exts/WatershedSOE/createWatershed";
 		
 		//this.ctmSymbol = new esri.symbol.SimpleFillSymbol(esri.symbol.SimpleFillSymbol.STYLE_SOLID, new esri.symbol.SimpleLineSymbol("dashdot", new dojo.Color([255, 0, 0]), 2), new dojo.Color([255, 255, 0, 0.25]));
 	},
 	
 	runCatchmentSearch:function(searchParams){
+		//searchParams has properties searchPoint, analysisExtent, and extractionData 
+		// where extractionData has a property for each parameter we want to extract from SOE
+		// and the available ones are defined in racquelServiceUrls.racquelCatchmentService.AvailableExtractionParams
 		var searchPoint = searchParams.searchPoint || null;
-		var doLCM2K = searchParams.LCM2000 || false;
-		var doElev = searchParams.Elevation || false;
-		var doUpstream = searchParams.UpstreamLength || false;
 		var analysisExtent = searchParams.SearchExtent || null;
 		// optionally can provide source point, will check if it's inside catchment
-		this.sourcePoint = searchParams.SourcePoint || null;
+		// NOT USED HERE - QC checking moved to result manager 
+		//this.sourcePoint = searchParams.SourcePoint || null;
 		if (!searchPoint.geometry) {return {successful:false};}
 		var searchId = searchPoint.attributes["searchId"];
-		console.log("Catchment search initiating for id: "+searchId);
+		//console.log("Catchment search initiating for id: "+searchId);
 		
-		var soeRequestContent = {
-			'hydroshed_id':	"search_"+searchId, //sending a straight number causes the SOE to fail to read as string
-			'location':		"{x:"+searchPoint.geometry.x+",y:"+searchPoint.geometry.y+"}",
-			'lcm2k':		doLCM2K,
-			'elev':			doElev,
-			'totalupstream':doUpstream,
-			'f':			"json",
-			'extent':		analysisExtent
+		// Build the parameters for the SOE request. The required SOE input parameter names may vary 
+		// so we read them from the service config object
+		var soeIdentifierParam = this.catchmentService.IDParamName;
+		var soeLocationParam = this.catchmentService.LocationParamName;
+		var soeExtentParam = this.catchmentService.ExtentParamName;
+		var soeRequestContent = {};
+		//sending a straight number causes the SOE to fail to read as string
+		soeRequestContent[soeIdentifierParam] = "search_"+searchId; 
+		soeRequestContent[soeLocationParam] = "{x:"+searchPoint.geometry.x+",y:"+searchPoint.geometry.y+"}";
+		soeRequestContent['f'] = "json"; // assume this one will always be "f"
+		soeRequestContent[soeExtentParam] = analysisExtent;
+		
+		for (var extractionparam in searchParams.extractionParams){
+			if (searchParams.extractionParams.hasOwnProperty(extractionparam)){
+				if (searchParams.extractionParams[extractionparam]){
+					soeRequestContent[extractionparam] = true;
+				}
+				else {
+					soeRequestContent[extractionparam] = false;
+				}
+			}
 		}
 		var catchSearchDef = new dojo.Deferred();
 		
 		var soeRequestDef = esri.request({
-			url:		this.soeURL,
+			url:		this.catchmentService.URL,
 			content:	soeRequestContent,
 			callbackParamName: "callback",
 			load:		dojo.hitch(this,function(soeResponse){
-							var catchResult = this._processCatchmentResult(soeResponse);
+							var catchResult = this._processCatchmentResult(soeResponse,searchParams.extractionParams);
 							catchResult.searchLocation = searchPoint;
 							catchSearchDef.callback(catchResult);
 						}),
@@ -61,7 +76,7 @@ dojo.declare("racquelDijits.catchmentSearch",[],{
 			uplength:	number || ''	
 			}
 	 */
-	_processCatchmentResult:function(soeResponse){
+	_processCatchmentResult:function(soeResponse,extractionParams){
 		console.log("catchment result processing");
 		var blankInfoTemplate = new esri.InfoTemplate();
 		var sr = new esri.SpatialReference({
@@ -73,31 +88,49 @@ dojo.declare("racquelDijits.catchmentSearch",[],{
 		}
 		for (var i=0,il=features.length;i<il;i++){
 			// there should only be one as the SOE unions polygons before returning. Just in case though.
+			// all fields are returned as attributes of the graphic(s) - build them back into structured
+			// object separating each dataset
 			var attr = features[i].attributes;
-			var searchId,area,uplength;
-			var lcmattr={},elevattr={};
-			for (var attribute in attr){
-				var value = attr[attribute];
-				if(attribute.indexOf('SEARCH_ID')!=-1)
-				{
-						searchId = parseInt(value.split('_')[1]);
+			var structured = {};
+			var searchId;
+			for (var extractionParam in extractionParams){
+				if (extractionParams.hasOwnProperty(extractionParam)){
+					var details = this.catchmentService.AvailableExtractionParams[extractionParam];
+					structured[extractionParam] = {};
+					if (details["type"] === "Literal"){
+						// only one field, just retrieve it
+						structured[extractionParam] = attr[details["responsePrefix"]];
+					}
+					else if (details["type"] === "Continuous"){
+						// always three corresponding fields, min, max and mean
+						// the members of attr beginning with details[responsePrefix]
+						structured[extractionParam]["Max"] = attr[details["responsePrefix"]+"Max"];
+						structured[extractionParam]["Min"] = attr[details["responsePrefix"]+"Min"];
+						structured[extractionParam]["Mean"] = attr[details["responsePrefix"]+"Mean"]; 
+					}
+					else if (details["type"] === "Categorical"){
+						// arbitrary number of corresponding fields, one for each class present
+						// go over all the returned attributes and add ones with the right prefix to the 
+						// appropriate property of structured output
+						for (var catAtt in attr){
+							if (catAtt.indexOf(details["responsePrefix"]) === 0)
+							{
+								var cat = catAtt.substring(details["responsePrefix"].length);
+								structured[extractionParam][cat] = attr[catAtt];
+							}
+						}
+					}
 				}
-				if(attribute.indexOf('AREA')!=-1)
-				{
-					area = value;
-				}
-				else if (attribute.indexOf('LCM2K')!= -1)
-				{
-					var lcm2kclass = attribute.split('_')[1];
-					lcmattr[lcm2kclass]=value;
-				}
-				else if (attribute.indexOf('ELEV')!=-1)
-				{
-					elevattr[attribute]=value
-				}
-				else if (attribute.indexOf('UPSTRM')!=-1)
-				{
-					uplength=value;
+			}
+			for (var defaultParam in this.catchmentService.DefaultOutputParams){
+				if (this.catchmentService.DefaultOutputParams.hasOwnProperty(defaultParam)){
+					var details = this.catchmentService.DefaultOutputParams[defaultParam];
+					if (details["type"] === "Identifier"){
+						searchId = attr[details["responsePrefix"]];
+					}
+					else {
+						structured[defaultParam] = attr[details["responsePrefix"]];
+					}
 				}
 			}
 			var geom = features[i].geometry;
@@ -106,26 +139,19 @@ dojo.declare("racquelDijits.catchmentSearch",[],{
 				polygon.addRing(geom.rings[j]);
 			}
 			//var ctmGraphic = new esri.Graphic(polygon,this.ctmSymbol,{'searchId':searchId,'area':area},blankInfoTemplate);
-			var ctmGraphic = new esri.Graphic(polygon,null,{'searchId':searchId,'area':area});
+			var ctmGraphic = new esri.Graphic(polygon, null, {
+				'searchId': searchId
+			});
 			var returnObject = {
 				searchId: searchId,
 				successful:true,
 				catchment:	ctmGraphic,
 				racquelResultType: "racquelCatchResult",
 			}
-			if (lcmattr != {}){
-				returnObject.lcm2k = lcmattr
-			}
-			if (elevattr != {}){
-				returnObject.elev = elevattr
-			}
-			if(uplength){
-				returnObject['uplength']=uplength
-			}
+			returnObject["extractedData"] = structured;
 			console.log("Catchment search completed for id: "+searchId);
 			return returnObject;
 		}
-			
 	},
 	_processCatchmentError:function(searchId){
 		console.log("catchment request error");

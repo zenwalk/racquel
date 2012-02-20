@@ -314,7 +314,7 @@ dojo.declare("racquelDijits.racquelResultManager",[dijit._Widget,dijit._Template
 		var resultPane = new dijit.layout.ContentPane({
 			title:				riverName,
 			doLayout:			true,
-			className:			"racquelResultPane",
+			className: "racquelResultPane",
 			id:					"racquelResultPane"+searchId 
 		});
 		var summaryDiv = dojo.create('div',{innerHTML:summaryTxt},resultPane.domNode);		
@@ -344,6 +344,7 @@ dojo.declare("racquelDijits.racquelResultManager",[dijit._Widget,dijit._Template
 			onCancel:function(){
 				this.destroyRecursive();
 			},
+			className: "racquelResultPane",
 			autofocus: !dojo.isIE,
 			refocus: !dojo.isIE
 		});
@@ -382,7 +383,9 @@ dojo.declare("racquelDijits.racquelResultManager",[dijit._Widget,dijit._Template
 			}
 			contents += "</table>";
 		}
-		var div = dojo.create("div",{innerHTML:contents});
+		var div = dojo.create("div",{
+			innerHTML:contents,
+			className:"racquelResultSection"});
 		return div;
 	},
 	_formatRouteResult:function(routeResultItem){
@@ -402,7 +405,10 @@ dojo.declare("racquelDijits.racquelResultManager",[dijit._Widget,dijit._Template
     		contents += "<tr><td>Distance to mouth (km)</td><td>" + Math.round((routeResultItem.mouthRoute.attributes.Total_length/1000)*1000)/1000 + "</td></tr>";
     		contents += "<tr><td>Mouth location</td><td>" + Math.round(routeResultItem.mouth.geometry.x) + "," + Math.round(routeResultItem.mouth.geometry.y) + "</td></tr></table>";
     	}
-		var div = dojo.create("div",{innerHTML:contents});
+		var div = dojo.create("div",{
+			innerHTML:contents,
+			className:"racquelResultSection"
+		});
 		return div;
 	},
 	_formatCatchResult:function(catchResultItem){
@@ -411,19 +417,19 @@ dojo.declare("racquelDijits.racquelResultManager",[dijit._Widget,dijit._Template
 			contents += "Catchment definition / extraction was not successful!"
 		}
 		else {
-			var catchArea = Math.round((catchResultItem.catchment.attributes.area / 1000000) * 100) / 100;
+			var data = catchResultItem["extractedData"];
+			var describer = new racquelDijits.racquelDataDescriptions();
+			// need to work with the "fixed" list of available parameters as opposed to what is currently
+			// set for extraction in the searchSettings as this could have been changed since the search was run
+			var config = this.toolbar.racquelServiceConfig.racquelCatchmentService;
+			for (var defaultParam in config["DefaultOutputParams"]){
+				if (data.hasOwnProperty(defaultParam) && defaultParam.type === "Literal"){
+					// catchment area is in data[defaultParam]
+					//Math.round((catchResultItem.catchment.attributes.area / 1000000) * 100) / 100;
+					//contents += "Catchment area is " + catchArea + "sq km.<br/>";
+				}
+			} 
 			// QC catchment here for now. Needs to move to search dijit so it works with batch search.
-			/*if (sourcePoint){
-				if (catchResultItem.catchment.geometry.contains(sourcePoint.geometry)){
-					contents += "QC: OK (Source point is within catchment)<br/>";
-				}
-				else {
-					contents += "QC: WARNING! Source point is not within catchment. Please check visually<br/>";
-				}
-			}
-			else {
-				contents += "QC: Catchment not quality controlled as route search was not done<br/>";
-			}*/
 			if (catchResultItem.catchmentQC){
 				if (catchResultItem.catchmentQC == "QC_OK"){
 					contents += "QC: OK (Source point is within catchment)<br/>";
@@ -435,34 +441,52 @@ dojo.declare("racquelDijits.racquelResultManager",[dijit._Widget,dijit._Template
 			else{
 				contents += "QC: Catchment not quality controlled as route search was not done or not successful<br/>";
 			}
-			contents += "Catchment area is " + catchArea + "sq km.<br/>";
-			if (catchResultItem.uplength) {
-				contents += "Total upstream river length within catchment is " +
-				Math.round((catchResultItem.uplength / 1000) * 1000) / 1000 +
-				"km.<br/>"
-			}
-			if (catchResultItem.lcm2k) {
-				//contents += "<h4>Land Cover Map 2000 catchment values</h4><br/><table border='1'>"
-				contents += "<table border='1'><tr><th colspan=2>Land Cover Map 2000 catchment values</th></tr>"
-				var describer = new racquelDijits.racquelDataDescriptions();
-				var lcmClasses = describer.lcm2000.classes;
-				for (var lcmclass in catchResultItem.lcm2k) {
-					if (catchResultItem.lcm2k.hasOwnProperty(lcmclass)) {
-						var percentage = Math.round(catchResultItem.lcm2k[lcmclass] * 100) / 100;
-						contents += "<tr><td>LCM Class "+lcmclass + " (" + lcmClasses[lcmclass]+ ")</td><td>"+percentage+"%</td></tr>";
+			// now do those in AvailableExtractionParams
+			// we're not sorting them - they may not always appear in same order. easy enough to sort if 
+			// anyone moans though
+			for (var possibleParamName in config["AvailableExtractionParams"]){
+				if (data.hasOwnProperty(possibleParamName)){
+					var parameterDetails = config["AvailableExtractionParams"][possibleParamName];
+					if (parameterDetails.type === "Literal"){
+						contents += parameterDetails["name"]+": ";
+						contents += data[possibleParamName] + "<br/>"; 
+						//Math.round((catchResultItem.uplength / 1000) * 1000) / 1000 +
+					}
+					else if (parameterDetails.type === "Continuous"){
+						contents += "<h4>" + parameterDetails["name"] + "</h4>";
+						var max = data[possibleParamName]["Max"];
+						var min = data[possibleParamName]["Min"];
+						var mean = data[possibleParamName]["Mean"];
+						contents += "Maximum: "+max+ "<br/>";
+						contents += "Minimum: "+min+ "<br/>";
+						contents += "Average: "+mean+"<br/>";
+						//contents += "Maximum elevation: "+(Math.round(catchResultItem.elev.ELEV_Max * 10)/10)+"m<br/>";
+						//contents += "Minimum elevation: "+(Math.round(catchResultItem.elev.ELEV_Min * 10)/10)+"m<br/>";
+						//contents += "Average (mean) elevation: "+(Math.round(catchResultItem.elev.ELEV_Mean * 10)/10)+"m<br/>";
+					}
+					else if (parameterDetails.type === "Categorical"){
+						contents += "<table border='1'><tr><th colspan=2>" + parameterDetails["name"] + "</th></tr>";
+						var classes = describer.lcm2k.classes;
+						for (var dataClass in data[possibleParamName]){
+							if (data[possibleParamName].hasOwnProperty(dataClass)){
+								// round if necessary 
+								// var percentage = Math.round(catchResultItem.lcm2k[lcmclass] * 100) / 100;
+								var value = data[possibleParamName][dataClass];
+								contents += "<tr><td>";
+								contents += "Class "+dataClass+ " ("+ classes[dataClass] + ")</td>";
+								contents += "<td>" + value + "%</td></tr>";
+							}
+						}
+						contents += "</table>";
 					}
 				}
-				contents += "</table>";
 			}
-			if(catchResultItem.elev)
-			{
-				contents += "<h4>Elevation summary:</h4>"
-				contents += "Maximum elevation: "+(Math.round(catchResultItem.elev.ELEV_Max * 10)/10)+"m<br/>";
-				contents += "Minimum elevation: "+(Math.round(catchResultItem.elev.ELEV_Min * 10)/10)+"m<br/>";
-				contents += "Average (mean) elevation: "+(Math.round(catchResultItem.elev.ELEV_Mean * 10)/10)+"m<br/>";
-			}
+			
 		}
-		var div = dojo.create("div",{innerHTML:contents});
+		var div = dojo.create("div",{
+			innerHTML:contents,
+			className:"racquelResultSection"
+		});
 		return div;
 	},
 	_zoomSelected:function(searchIdsArray){
@@ -543,6 +567,7 @@ dojo.declare("racquelDijits.racquelResultManager",[dijit._Widget,dijit._Template
 		// reloaded on next visit to the page
 		// Will use browser localStorage (HTML5 -> not IE) to store the main resultStore contents
 		alert("This will save selected results so they're still here next time you visit. Still to be developed!");
+		
 		
 	},
 	_exportSelected:function(){
