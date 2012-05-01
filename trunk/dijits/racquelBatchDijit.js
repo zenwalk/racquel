@@ -230,7 +230,9 @@ dojo.declare("racquelDijits.racquelBatchDijit",[dijit._Widget, dijit._Templated]
 			searchPointGraphic = new esri.Graphic(searchPoint,this.batchSymbol,{searchId:id});
 		}
 		if (doSite && doRoute && doCatch) {
-			searchParams = new racquelDijits.racquelSearchSettings();
+			searchParams = new racquelDijits.racquelSearchSettings({
+				serviceConfig: this.toolbar.racquelServiceConfig
+			});
 			searchParams.setSite(doSite === "YES");
 			searchParams.setRoute(doRoute === "YES");
 			searchParams.setCatchment(doCatch === "YES");
