@@ -22,10 +22,11 @@ dojo.declare("racquelDijits.racquelControlDijit",[dijit._Widget, dijit._Template
 		this._ControlDijitSite.set('checked',currentParams.doSite());
 		this._ControlDijitRoutes.set('checked',currentParams.doRoute());
 		this._ControlDijitCatchment.set('checked',currentParams.doCatchment());
-		this._ControlDijitElev.set('checked',currentParams.doElev());
-		this._ControlDijitLCM.set('checked',currentParams.doLCM2K());
-		this._ControlDijitUpstream.set('checked',currentParams.doUpstream());
-		this._ControlDijitQC.set('checked',currentParams.doCatchmentQC());
+		// extraction params being rewritten to use extractionParams object, not yet done...
+		//this._ControlDijitElev.set('checked',currentParams.doElev());
+		//this._ControlDijitLCM.set('checked',currentParams.doLCM2K());
+		//this._ControlDijitUpstream.set('checked',currentParams.doUpstream());
+		//this._ControlDijitQC.set('checked',currentParams.doCatchmentQC());
 		this._ControlDijitNetLoc.set('checked',currentParams.useNetLocation());
 	},
 	saveTasks: function(){
@@ -36,11 +37,12 @@ dojo.declare("racquelDijits.racquelControlDijit",[dijit._Widget, dijit._Template
 		// would be best to disable these sub-checkboxes. Never mind, the racquelSearchSettings object 
 		// won't keep them if the catchment hasn't first been set (and in any case they'd have no effect
 		// as the search dijit wouldn't read them)
-		currentParams.setElev(this._ControlDijitElev.get('checked'));
-		currentParams.setLCM2K(this._ControlDijitLCM.get('checked'));
-		currentParams.setUpstream(this._ControlDijitUpstream.get('checked'));
+		// not currently in use 
+		//currentParams.setElev(this._ControlDijitElev.get('checked'));
+		//currentParams.setLCM2K(this._ControlDijitLCM.get('checked'));
+		//currentParams.setUpstream(this._ControlDijitUpstream.get('checked'));
 		// likewise these won't be saved as true in racquelSearchSettings unless the preconditions are met
-		currentParams.setCatchmentQC(this._ControlDijitQC.get('checked'));
+		//currentParams.setCatchmentQC(this._ControlDijitQC.get('checked'));
 		currentParams.setUseNetLoc(this._ControlDijitNetLoc.get('checked'));
 		this._ControlDijitDialog.hide();
 	},

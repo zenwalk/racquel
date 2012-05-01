@@ -7,6 +7,21 @@ dojo.declare("racquelDijits.racquelSearchDijit",[],{
 		this.searchEnabled = true;
 		if (this.map){
 			//this.mapConnection = dojo.connect(this.map,"onClick",dojo.hitch(this,this.runInteractiveSearch));
+			var currentCentre = this.map.extent.getCenter();
+			var symbol = this.toolbar.racquelMapSymbols.crossHairSymbol;
+			this.crossHairGraphic = new esri.Graphic(currentCentre,symbol);
+			if (this.map.loaded) {
+				this.map.graphics.add(this.crossHairGraphic);
+			}
+			else {
+				console.log ("Map not loaded when crosshair created");
+				dojo.connect(this.map,"onLoad",dojo.hitch(this,function(){
+					this.map.graphics.add(this.crossHairGraphic);
+				}));
+			}
+			dojo.connect(this.map,"onExtentChange",dojo.hitch(this,function(ext){
+				this.crossHairGraphic.setGeometry(ext.getCenter());
+			}));
 		}
 	},
 	runInteractiveSearch:function(evt){
@@ -20,6 +35,14 @@ dojo.declare("racquelDijits.racquelSearchDijit",[],{
 		var params = this.toolbar.racquelInteractiveSettings;
 		this.runSearch(searchGraphic,params);
 	},
+	runCrossHairSearch:function(){
+		var searchPoint = this.crossHairGraphic.geometry;
+		var searchSymbol = new esri.symbol.SimpleMarkerSymbol().setStyle(esri.symbol.SimpleMarkerSymbol.STYLE_CROSS).setSize(12).setColor(new dojo.Color([255, 0, 0, 1])).setOutline(new esri.symbol.SimpleLineSymbol(esri.symbol.SimpleLineSymbol.STYLE_SOLID, new dojo.Color([255, 0, 0]), 1));
+		var searchId = new Date().getTime();
+		var searchGraphic = new esri.Graphic(searchPoint,searchSymbol,{searchId:searchId});
+		var params = this.toolbar.racquelInteractiveSettings;
+		this.runSearch(searchGraphic,params);
+	},
 	runSearch:function(searchGraphic,searchParams){
 		if (!this.searchEnabled){
 			console.error("Search is not ready!");
@@ -27,6 +50,7 @@ dojo.declare("racquelDijits.racquelSearchDijit",[],{
 		}
 		// call the method on the toolbar to unset the tool button, in turn it will call disableSearch here to disconnect the map
 		this.toolbar.disableInteractiveSearch();
+		this.toolbar.disableCrossHairSearch();
 		this._setMapCursor("busy"); 
 		var tasklist = [];
 		if (searchParams.doSite()){
@@ -182,6 +206,13 @@ dojo.declare("racquelDijits.racquelSearchDijit",[],{
 		}
 		else if (!this.map){
 			console.error("racquelSearchDijit: Cannot enable interactive search with no map!");
+		}
+		this.enableSearch();
+	},
+	enableCrosshairSearch:function(){
+		// run search at map centre point
+		if (this.map && !this.crossHairConnection){
+			this.crossHairConnection = dojo.connect(this.toolbar.searchHereButton,"onClick",dojo.hitch(this,this.runCrossHairSearch));
 		}
 		this.enableSearch();
 	},

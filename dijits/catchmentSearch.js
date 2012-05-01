@@ -126,7 +126,7 @@ dojo.declare("racquelDijits.catchmentSearch",[],{
 				if (this.catchmentService.DefaultOutputParams.hasOwnProperty(defaultParam)){
 					var details = this.catchmentService.DefaultOutputParams[defaultParam];
 					if (details["type"] === "Identifier"){
-						searchId = attr[details["responsePrefix"]];
+						searchId = attr[details["responsePrefix"]].split('_')[1];
 					}
 					else {
 						structured[defaultParam] = attr[details["responsePrefix"]];

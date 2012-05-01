@@ -16,7 +16,7 @@ dojo.require("racquelDijits.racquelBatchDijit");
 dojo.require("racquelDijits.racquelMapSymbols");
 dojo.require("racquelDijits.racquelServiceConfig");
 dojo.require("dojo.fx.easing");
-
+dojo.require("dojo.io.script"); // load non-dojo scripts on demand
 dojo.declare("racquelDijits.racquelToolbarDijit",[dijit._Widget, dijit._Templated],{
 	map: null, // the map to which this dijit is attached
 	widgetsInTemplate: true,
@@ -41,7 +41,8 @@ dojo.declare("racquelDijits.racquelToolbarDijit",[dijit._Widget, dijit._Template
 		this.racquelResultStore = new racquelDijits.racquelResultStore();
 		this.canDoBatchSearch = (window.File && window.FileReader);
 		this.canSaveResults = window.localStorage !== 'undefined';
-		
+		// load geotools - used to transform WGS84 into OSGB on client-side (for use with GPS tracking)
+		this.loadExternalScript("lib/geotools2.js")
 		// always use a batch search dijit
 		this.racquelBatchDijit = new racquelDijits.racquelBatchDijit({racquelToolbar:this});
 		// we always need site, route, and catchment search dijits, but the site one can be instantiated with or 
@@ -53,6 +54,12 @@ dojo.declare("racquelDijits.racquelToolbarDijit",[dijit._Widget, dijit._Template
 		this.racquelCatchDijit = new racquelDijits.catchmentSearch({
 			serviceConfig:this.racquelServiceConfig
 		});
+		if(!params.isTablet ){
+			this.templateString = dojo.cache(dojo.moduleUrl("racquelDijits","templates/racquelToolbarDijit.html"));
+		}
+		else {
+			this.templateString = dojo.cache(dojo.moduleUrl("racquelDijits","templates/racquelToolbarDijitTablet.html"));
+		}
 		if(params.map){
 			// Toolbar is in a webpage that contains a map. This means that interactive search can be enabled
 			// and we can also pass the map to the siteSearch dijit (used to set tolerance for search).
@@ -72,7 +79,7 @@ dojo.declare("racquelDijits.racquelToolbarDijit",[dijit._Widget, dijit._Template
 			// (depends on the users page layout). Default is floating.
 			if(params.resultDiv){
 				this.racquelResultManager = new racquelDijits.racquelResultManager({map:params.map,racquelToolbar:this,displayMode:"fixed"});
-				this.racquelResultManager.placeAt(params.resultDiv);
+				this.racquelResultManager.placeAt(dojo.byId(params.resultDiv));
 			}
 			else {
 				this.racquelResultManager = new racquelDijits.racquelResultManager({racquelToolbar:this,map:params.map});
@@ -251,6 +258,54 @@ dojo.declare("racquelDijits.racquelToolbarDijit",[dijit._Widget, dijit._Template
 		}
 		else {this.disableInteractiveSearch();}
 	},
+	runCrossHairSearch:function(){
+		//this.disableInteractiveSearch();
+		// call cross hair search routine
+		this.racquelSearchDijit.runCrossHairSearch();
+	},
+	toggleGeolocation:function(){
+		if (this._btnToggleGeolocation.checked){
+			this._startLocation();
+		}
+		else {
+			this._stopLocation();
+		}
+	},
+	_startLocation:function(){
+		if (this.watchProcess != null){
+			// already running, shouldn't have been called... ignore
+			return;
+		}
+		else if (navigator.geolocation){
+			this.watchProcess = navigator.geolocation.watchPosition(
+			dojo.hitch(this,this._processLocation),
+			dojo.hitch(this,this._locationError),
+			{
+				enableHighAccuracy:true,
+				maximumAge:30000,
+				frequency:10000
+			});
+		}
+	},
+	_stopLocation:function(){
+		if (this.watchProcess != null){
+			navigator.geolocation.clearWatch(this.watchProcess);
+			this.watchProcess=null;
+		}
+	},
+	_processLocation:function(loc){
+		if (GT_WGS84){
+			var wgs84 = new GT_WGS84();
+			wgs84.setDegrees(loc.coords.latitude,loc.coords.longitude);
+			var osgb = wgs84.getOSGB();
+			var point = new esri.geometry.Point(osgb.eastings,osgb.northings,new esri.SpatialReference({ wkid: 27700 }));
+			this.map.centerAt(point);	
+		}
+	},
+	_locationError:function(){
+		console.log("Location error");
+		return;
+	},
 	activateInteractiveSearch: function(){ // this function is called by onClick on the toolbar
 		// this will wire the maps' onClickevent rather than showing a dialog directly
 		// i.e. behave as a tool like zoom, identify, etc
@@ -264,6 +319,11 @@ dojo.declare("racquelDijits.racquelToolbarDijit",[dijit._Widget, dijit._Template
 		this._btnToggleInteractive.focus(); // otherwise the screen display of it doesn't update!
 		// in case it's been disabled other than by clickign the button i.e. if a batch search was initiated
 	},
+	disableCrossHairSearch:function(){
+		this.racquelSearchDijit.disableSearch();
+		this._btnToggleInteractive.checked = false; 
+		this._btnToggleInteractive.focus(); // otherwise the screen display of it doesn't update!
+	},
 	activateBatchSearch: function(){ // this function is called by onClick on the toolbar
 		// this will open a batch search dijit which will allow drag and drop of a csv file
 		// in HTML5 browsers and then run multiple racquel searches based on its contents
@@ -276,48 +336,32 @@ dojo.declare("racquelDijits.racquelToolbarDijit",[dijit._Widget, dijit._Template
 		this.disableInteractiveSearch();
 		this.racquelBatchDijit.showDialog();
 	},
-	_loadJS2Shp:function(loaderCallback){
-		if(!this.ShapefileLoaded){
-			var fileref = document.createElement('script');
-			fileref.setAttribute("type","text/javascript");
-			fileref.setAttribute("src","lib/JSShapefile_Webkit.js");
-			fileref.onload = dojo.hitch(this,function(){
-				this.ShapefileLoaded=true;
-				loaderCallback();
-			});
-			fileref.onreadystatechange = dojo.hitch(this,function(){
-				if(this.readyState=='complete'){
-					this.ShapefileLoaded = true;
-					loaderCallback();
+	
+	loadExternalScript:function(scripturl,checkstring){
+		console.log("Attempting to load library "+scripturl+"... loading will be considered complete when "
+			+checkstring+" object exists");
+		var def = new dojo.Deferred();
+		if ((typeof window[checkstring] == 'undefined') && !window['loading' + checkstring]) {
+			window['loading'+checkstring]=true;
+			dojo.io.script.get({
+				url: scripturl,
+				checkString: checkstring,
+				load: function(){
+					console.log("Library "+scripturl+" loaded, object "+checkstring+" now available");
+					def.callback();
 				}
 			});
-			document.getElementsByTagName("head")[0].appendChild(fileref);
+		}
+		else if (typeof window[checkstring]=='undefined'){
+			// do nothing, it has been called to load but has not yet loaded
+			console.log("Repeated call to load "+scripturl+" but it is already attempting to load");
 		}
 		else {
-			loaderCallback();
+			// it is already loaded
+			console.log("Library "+scripturl+" is already loaded, no need to reload");
+			def.callback();
 		}
+		return def;
+		
 	},
-	_loadSaveAs:function(loaderCallback){
-		if (!this.fileSaverLoaded){
-			var fileref = document.createElement('script');
-			fileref.setAttribute("type","text/javascript");
-			fileref.setAttribute("src","lib/FileSaver.min.js");
-			fileref.onload = dojo.hitch(this,function(){
-				this.fileSaverLoaded=true;
-				loaderCallback();
-			});
-			fileref.onreadystatechange = dojo.hitch(this,function(){
-				if(this.readyState=='complete'){
-					this.fileSaverLoaded = true;
-					loaderCallback();
-				}
-			});
-			document.getElementsByTagName("head")[0].appendChild(fileref);
-		}
-		else {
-			loaderCallback();
-		}
-	}
-	
-	
 })

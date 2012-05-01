@@ -6,9 +6,9 @@
 			</span>
 			<!-- buttons here to clear all, clear selected, zoom to selected-->
 			<span>
-			<input dojotype = 'dijit.form.Button' title='Select all results' label='All' dojoAttachPoint='_btnSelectAll'>
-			<input dojotype = 'dijit.form.Button' title='Clear selection' label='None' dojoAttachPoint='_btnSelectNone'>
-			<input dojotype = 'dijit.form.Button' title='Delete selected results' label='Delete' dojoAttachPoint='_btnDeleteSelected'>
+			<input dojotype = 'dijit.form.Button' title='Select all results' label='Select All' dojoAttachPoint='_btnSelectAll'>
+			<input dojotype = 'dijit.form.Button' title='Clear selection' label='Select None' dojoAttachPoint='_btnSelectNone'>
+			<input dojotype = 'dijit.form.Button' title='Delete selected results' label='Delete Selected' dojoAttachPoint='_btnDeleteSelected'>
 			<input dojotype = 'dijit.form.Button' title='Zoom to selected results' label='Zoom' dojoAttachPoint='_btnZoomSelected'>
 			<input dojotype = 'dijit.form.Button' title='Save selected results' label='Save' dojoAttachPoint='_btnSaveSelected'>
 			</span>
@@ -21,13 +21,16 @@
 						<th field="SearchId" width="25px" formatter="_getGridCheckBox" canSort="false">
 							&nbsp
 						</th>
-						<th field="River">River</th>
-						<th field="Location" formatter="_getGridCoords">Coords</th>
-						<th field="Site" formatter="_getGridYesNoText">Site?</th>
-						<th field="Route" formatter="_getGridYesNoText">Route?</th>
-						<th field="Catchment" formatter="_getGridYesNoText">Catchment?</th>
-						<th field="_item" formatter="_getGridShowHideBox" canSort="false">Map</th>
-						<th field="SearchId" formatter="_getShowDetailsButton" canSort="false">Details</th>
+						<th field="River" width="75px">River</th>
+						<th field="Location" formatter="_getGridCoords" width="85px">Coords</th>
+						<th field="Site" formatter="_getGridYesNoText" width="35px">Site?</th>
+						<th field="Route" formatter="_getGridYesNoText" width="45px">Route?</th>
+						<th field="Catchment" formatter="_getGridYesNoText" width="70px">Catchment?</th>
+						<th field="_item" formatter="_getGridShowHideBox" canSort="false" width="30px">Map</th>
+						<th field="SearchId" formatter="_getShowDetailsButton" canSort="false" width="60px">Details</th>
+						<th field="SearchId" formatter="_getZoomToButton" width="60px" canSort="false">
+							Zoom
+						</th>
 					</tr>
 				</thead>
 			</table>

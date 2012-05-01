@@ -139,13 +139,6 @@ dojo.declare("racquelDijits.racquelResultManager",[dijit._Widget,dijit._Template
 		// remove the row corresponding to searchId from the grid, and associated graphics from the map
 		// DO NOT call directly in this widget. This widget's delete controls act on the toolbar's result store
 		// and this method will then be called in response to the change there.
-		/*if (this._graphicsLayer) {
-			dojo.forEach(this._graphicsLayer.graphics,dojo.hitch(this,function(graphic){
-				if((graphic.attributes) && graphic.attributes[searchId]==searchId){
-					this._graphicsLayer.remove(graphic);
-				}
-			}));
-		}*/
 		this._showHideResults(searchId,true);//remove from map, if showing
 		this.store.fetch({query:{'SearchId':searchId},onComplete:dojo.hitch(this,function(items){
 			var item = items[0];
@@ -336,6 +329,15 @@ dojo.declare("racquelDijits.racquelResultManager",[dijit._Widget,dijit._Template
 				resultPane.domNode.appendChild(this._formatCatchResult(racquelResultItem['catchResults']));
 			//}
 		}
+		var okButton = new dijit.form.Button({
+			label:"OK",
+			onClick: dojo.hitch(this,function(){
+				dialog.destroyRecursive();
+			})
+		});
+		okButton.startup();
+		dojo.place(okButton.domNode,resultPane.domNode,"last"); 
+		
 		resultPane.startup();
 		var dialog = new dijit.Dialog({
 			title: "Result details",
@@ -449,20 +451,16 @@ dojo.declare("racquelDijits.racquelResultManager",[dijit._Widget,dijit._Template
 					var parameterDetails = config["AvailableExtractionParams"][possibleParamName];
 					if (parameterDetails.type === "Literal"){
 						contents += parameterDetails["name"]+": ";
-						contents += data[possibleParamName] + "<br/>"; 
-						//Math.round((catchResultItem.uplength / 1000) * 1000) / 1000 +
+						contents += (Math.round((data[possibleParamName])*1000)/1000) + "<br/>"; 
 					}
 					else if (parameterDetails.type === "Continuous"){
 						contents += "<h4>" + parameterDetails["name"] + "</h4>";
-						var max = data[possibleParamName]["Max"];
-						var min = data[possibleParamName]["Min"];
-						var mean = data[possibleParamName]["Mean"];
+						var max = Math.round(((data[possibleParamName]["Max"])/10)*10)/10;
+						var min = Math.round(((data[possibleParamName]["Min"])/10)*10)/10;
+						var mean = Math.round(((data[possibleParamName]["Mean"])/10)*10)/10;
 						contents += "Maximum: "+max+ "<br/>";
 						contents += "Minimum: "+min+ "<br/>";
 						contents += "Average: "+mean+"<br/>";
-						//contents += "Maximum elevation: "+(Math.round(catchResultItem.elev.ELEV_Max * 10)/10)+"m<br/>";
-						//contents += "Minimum elevation: "+(Math.round(catchResultItem.elev.ELEV_Min * 10)/10)+"m<br/>";
-						//contents += "Average (mean) elevation: "+(Math.round(catchResultItem.elev.ELEV_Mean * 10)/10)+"m<br/>";
 					}
 					else if (parameterDetails.type === "Categorical"){
 						contents += "<table border='1'><tr><th colspan=2>" + parameterDetails["name"] + "</th></tr>";
@@ -470,8 +468,7 @@ dojo.declare("racquelDijits.racquelResultManager",[dijit._Widget,dijit._Template
 						for (var dataClass in data[possibleParamName]){
 							if (data[possibleParamName].hasOwnProperty(dataClass)){
 								// round if necessary 
-								// var percentage = Math.round(catchResultItem.lcm2k[lcmclass] * 100) / 100;
-								var value = data[possibleParamName][dataClass];
+								var value = Math.round((data[possibleParamName][dataClass])*100)/100;
 								contents += "<tr><td>";
 								contents += "Class "+dataClass+ " ("+ classes[dataClass] + ")</td>";
 								contents += "<td>" + value + "%</td></tr>";
@@ -519,9 +516,10 @@ dojo.declare("racquelDijits.racquelResultManager",[dijit._Widget,dijit._Template
 		}
 	},
 	_selectAll:function(){
-		// select all result row checkboxes
+		// select all result rows checkboxes
 		console.log("Select all");
 		this._grid.selection.selectRange(0,this._grid.rowCount-1);
+		// or select all result rows checkboxes - NOT USING
 		//var inputs = dojo.query(".racquelIdCheckBox");
 		//dojo.forEach(inputs,dojo.hitch(this,function(input){
 		//	var checkboxwidget = dijit.getEnclosingWidget(input);
@@ -531,16 +529,9 @@ dojo.declare("racquelDijits.racquelResultManager",[dijit._Widget,dijit._Template
 		//}));
 	},
 	_selectNone:function(){
-		// deselect all result row checkboxes
+		// deselect all result rows
 		console.log("Clear selection");
 		this._grid.selection.clear();
-		//var inputs = dojo.query(".racquelIdcheckBox");
-		//dojo.forEach(inputs,dojo.hitch(this,function(input){
-		//	var checkboxwidget = dijit.getEnclosingWidget(input);
-		//	if (checkboxwidget.checked){
-		//		checkboxwidget.checked = false;
-		//	}
-		//}));
 	},
 	_deleteSelected:function(){
 		// get the selected results and delete them from the result store. This will in turn trigger removing
@@ -566,18 +557,112 @@ dojo.declare("racquelDijits.racquelResultManager",[dijit._Widget,dijit._Template
 		// Trigger for functionality to save selected results into a session state so they can be 
 		// reloaded on next visit to the page
 		// Will use browser localStorage (HTML5 -> not IE) to store the main resultStore contents
-		alert("This will save selected results so they're still here next time you visit. Still to be developed!");
-		
-		
+		// alert("This will save selected results so they're still here next time you visit. Still to be developed!");
+		// CURRENTLY NOT USED - ALL ARE SAVED AUTOMATICALLY ON PAGE UNLOAD
 	},
 	_exportSelected:function(){
-		// Trigger for functionality to export selected results (not yet written).
-		// Could consist of:
+		// Trigger for functionality to export selected results to a shapefile.
+		// The shapefile is generated entirely in the browser using binary HTML5 spec, or emulation classes
+		// in non-compatible browsers. No server side faff. 
+		
+		// Uses JS2Shapefile library, written by me as separate package not using dojo
+		// Therefore load it using dojo.io.script.get rather than dojo.require
+		// JS2Shapefile needs to create and save binary data in the browser which can only be done where 
+		// BlobBuilder, DataView, and File API are implemented. 
+		// Only Chrome does all these and some people still insist on not using it. So, to support other 
+		// browsers, wrap all this functionality into a separate BinaryHelper class, 
+		// also loaded via dojo.io.script.get 
+		// This in turn loads whatever helper bits the current browser requires, using script tag insertion.
+		// (because dojo is not necessarily present in applications using this class).
+		 
+		// A shapefile is created for each of points, lines, and polygons and the features in each contain
+		// all the attributes found in any of the input graphics
+		
+		// Simpler export methods could consist of:
 		// - formatting results into flat csv format and download via server pingback
 		// - formatting results into flat csv format and display in dialog to copy/paste
 		// - sending results to server, returning a zipped shapefile for each of site, route, and catchment results
 		// (one feature in each for each search). This needs an SOE to be writen to handle this
-		alert("This will export selected results to shapefiles. It only works in Google Chrome!");
+		
+		// First load the js2shapefile library and the filesavetools library
+		var tmp = [];
+		tmp.push(this.toolbar.loadExternalScript('../js2shapefile/src/JS2Shapefile.js', 'Shapefile'));
+		
+		// The BinaryHelper class contains tools for generating and saving binary data. These include 
+		// a BlobBuilder polyfiller class to allow pseudo-blob generation in IE, so it is required by the 
+		// shapefile library. It also includes tools to save these Blobs to disk either natively or via
+		// a flash helper in browsers without File API (anything but Chrome) 
+		tmp.push(this.toolbar.loadExternalScript('../js2shapefile/lib/FileSaveTools.js', 'BinaryHelper'));
+		
+		// BinaryHelper itself loads the jDataView_write library. This is currently a requirement of the JS2Shapefile class - 
+		// it is a polyfiller for browsers which do not implement DataView. Since only Chrome currently does
+		// the library has been written with the assumption that it's probably not available and relies on 
+		// the polyfiller. (The polyfiller uses native DataView if it's available so the only cost is the script 
+		// load.) 
+		
+		// tmp is now an array of 2 Dojo.Deferreds, which will be resolved when the objects called 
+		// "Shapefile" and "BinaryHelper" are defined. (The latter will occur only when jDataView_write and other
+		// subsidiaries are also available).
+		
+		// We will make a DeferredList from it shortly so that we don't continue until everything is available,
+		// but first add one more to represent whether the user wants to continue or not, which is set 
+		// in response to a dojo Dialog giving some bumph about what will happen next. 
+		// This isn't modal, so execution will continue as the user reads its content, but only
+		// by clicking OK will the DeferredList tmp be resolved, prompting the call to ExportGraphics.
+		// Handily this provides some cover for the delay while the other scripts are downloaded.
+		var okToContinue = new dojo.Deferred();
+		tmp.push(okToContinue);
+		var saveDialogContent = new dijit.layout.ContentPane({
+			title:				"Save Results to Shapefile",
+			doLayout:			true,
+			className: "saveDialogPane",
+			id:			"saveIntroPane" 
+		});
+		var summaryDiv = dojo.create('div',{
+			innerHTML: "This will export selected results to shapefiles. It works best in Google Chrome<br/>"+ 
+			"(as do most things). <br/><br/>"+
+			"Other browsers should work if you have Flash installed but there<br/>"+ 
+			"may be a short pause during which your browser appears unresponsive,<br/>"+ 
+			"whilst the shapefile(s) are created. This may cause your browser to show a <br/>"+
+			"'Script Unresponsive' message - please choose continue, if so."+
+			"If this is a problem, please upgrade your browser."
+		},saveDialogContent.domNode);		
+		saveDialogContent.startup();
+		var dialog = new dijit.Dialog({
+			title: "Save Results to Shapefile",
+			content: saveDialogContent,
+			refreshOnShow:true,
+			onCancel:function(){
+				this.destroyRecursive();
+			},
+			className: "racquelResultPane",
+			autofocus: !dojo.isIE,
+			refocus: !dojo.isIE
+		});
+		var okButton = new dijit.form.Button({
+			label: 'Create Shapefiles',
+			onClick: function(){
+				okToContinue.resolve();
+				dialog.onCancel();
+			},	
+		})
+		var cancelButton = new dijit.form.Button({
+			label: 'Cancel',
+			onClick:function(){
+				// okToContinue.cancel ??
+				dialog.onCancel();
+			}
+		})
+		okButton.startup();
+		cancelButton.startup();
+		saveDialogContent.domNode.appendChild(okButton.domNode);
+		saveDialogContent.domNode.appendChild(cancelButton.domNode);
+		
+		dialog.startup();
+		dialog.show();
+		
+		// Now get all the graphics associated with the selected search records (this will happen while the
+		// dialog is showing and the export scripts are downloading)
 		var selected = this._grid.selection.getSelected(); // <- this for the grids native row selection, returns store items
 		var selectedIds = [];
 		dojo.forEach(selected,dojo.hitch(this,function(item){
@@ -588,65 +673,97 @@ dojo.declare("racquelDijits.racquelResultManager",[dijit._Widget,dijit._Template
 		var graphicsToExport = [];
 		dojo.forEach(selectedIds,dojo.hitch(this,function(item){
 			if (item) {
-				var graphicsFromSearch = this.toolbar.racquelResultStore.getResultAsAttributedGraphics(item);
-				// this will be an array containing the graphics, we want to put the individual items, rather than  
-				// the array itself, onto the export array
-				dojo.forEach(graphicsFromSearch,dojo.hitch(this,function(graphic){
-					graphicsToExport.push(graphic);
-				}));
+				// convert the result object into an array of graphics each with appropriate attributes
+				try {
+					var graphicsFromSearch = this.toolbar.racquelResultStore.getResultAsAttributedGraphics(item);
+					// this will be an array containing the graphics, we want to put the individual items, rather than  
+					// the array itself, onto the export array
+					dojo.forEach(graphicsFromSearch, dojo.hitch(this, function(graphic){
+						graphicsToExport.push(graphic);
+					}));
+				}
+				catch (err){
+					console.log("Problem with search id "+item+" - will not be exported");
+				}
 			}
 		}));
-		// graphicsToExport now contains an array of esri graphics which have the other data as attributes
-		// this is suitable for input to the shapefile maker
-		if (!this.toolbar.ShapefileLoaded){
-			// we need to load the shapefile library (it's not a dojo package so haven't pulled it in already 
-			// using dojo.require)
-			console.log("Loading shapefile library");
-			this.toolbar._loadJS2Shp(dojo.hitch(this,function(){
-				// and we also need to load the saveAs library for the same reason
-				if (!this.toolbar.fileSaverLoaded){
-					console.log("Loading file save library");
-					this.toolbar._loadSaveAs(dojo.hitch(this,function(){
-						console.log("loaded both libraries, calling export routine");
-						this.exportGraphics(graphicsToExport);
-					}));					
-				}
-				else {
-					console.log("file save library already loaded, calling export routine");
-					this.exportGraphics(graphicsToExport);
-				}
+		
+		if (tmp.length > 0) {
+			var dl = new dojo.DeferredList(tmp);
+			dl.then(dojo.hitch(this, function(){
+				// exportGraphics generates the shapefile. So it is called only after the libraries are loaded.
+				this.exportGraphics(graphicsToExport);
 			}));
 		}
 		else {
-			console.log("already loaded shapefile and file save libraries");
-			// assume that if shapefile lib is loaded then so is saveAs library...
 			this.exportGraphics(graphicsToExport);
 		}
 	},
 	exportGraphics:function(graphics){
-		var shapewriter = new Shapefile({shapetype:"POINT"});
+		// Method which actually generates and provides interface to save the shapefile. Called by
+		// _exportSelected when the required libraries have been loaded.
+		var shapewriter = new Shapefile();
+		// we can add an array of graphics of mixed geometry types...
 		shapewriter.addESRIGraphics(graphics);
-		var pointfile = shapewriter.getShapefile();
-		shapewriter.shapetype = "POLYLINE";
-		var linefile = shapewriter.getShapefile();
-		shapewriter.shapetype = "POLYGON";
-		var polygonfile = shapewriter.getShapefile();
-		if (pointfile["shape"]) {
-			saveAs(pointfile["shape"], "racquel_results_points.shp");
-			saveAs(pointfile["shx"], "racquel_results_points.shx");
-			saveAs(pointfile["dbf"], "racquel_results_points.dbf");
+		// and then retrieve shapefiles which contain only the relevant geometry types
+		var outputObject = {
+			points: shapewriter.getShapefile("POINT"),
+			lines: shapewriter.getShapefile("POLYLINE"),
+			polygons: shapewriter.getShapefile("POLYGON")
 		}
-		if (linefile["shape"]) {
-			saveAs(linefile["shape"], "racquel_results_lines.shp");
-			saveAs(linefile["shx"], "racquel_results_lines.shx");
-			saveAs(linefile["dbf"], "racquel_results_lines.dbf");
+		// each of these objects returned from getShapefile contains an attribute 'successful' and if that's true,
+		// another attribute 'shapefile' containing the actual shapefile data represented as a sub-object 
+		// containing three attributes called dbf,shp,shx, the values of which are BlobBuilders
+		// BinaryHelper.addData takes input as an object containing properties 'filename', 'extension' and 
+		// 'datablob'
+		var saver = new BinaryHelper();
+		var anythingToDo = false;
+		for (var shapefiletype in outputObject){
+			if (outputObject.hasOwnProperty(shapefiletype)){
+				if (outputObject[shapefiletype]['successful']){
+					anythingToDo = true;
+					for (actualfile in outputObject[shapefiletype]['shapefile']){
+						if (outputObject[shapefiletype]['shapefile'].hasOwnProperty(actualfile)){
+							saver.addData({
+								filename: "racquel_results_"+shapefiletype,
+								extension: actualfile,
+								datablob: outputObject[shapefiletype]['shapefile'][actualfile]
+							});
+						}
+					}
+				}
+			}
 		}
-		if (polygonfile['shape']) {
-			saveAs(polygonfile["shape"], "racquel_results_polygons.shp");
-			saveAs(polygonfile["shx"], "racquel_results_polygons.shx");
-			saveAs(polygonfile["dbf"], "racquel_results_polygons.dbf");
-		}
+		
+		// The fileSaver is now loaded and ready to go. If it's a native one (Chrome) then we could at this point
+		// call _saveNative to save the data directly to disk. But if it's flash-based then the actual disk write
+		// needs to be a direct response to user interaction (flash limitation) so need to generate a button
+		// for the user to click. Do this in Chrome too for consistency - but in Chrome it will be a normal
+		// button rather than a flash lookalike.
+		var saveDialogContent = new dijit.layout.ContentPane({
+			title:				"Export Results",
+			doLayout:			true,
+			className: "saveDialogPane",
+			id:			"saveDialogPane" 
+		});
+		var summaryDiv = dojo.create('div',{innerHTML:"Click the button to save results"},saveDialogContent.domNode);		
+		saveDialogContent.startup();
+		var dialog = new dijit.Dialog({
+			title: "Save results",
+			content: saveDialogContent,
+			refreshOnShow:true,
+			onCancel:function(){
+				this.destroyRecursive();
+			},
+			className: "racquelResultPane",
+			autofocus: !dojo.isIE,
+			refocus: !dojo.isIE
+		});
+		dialog.startup();
+		dialog.show();
+		saver.createSaveControl("saveDialogPane",true);
 	},
+	
 	_getSelected:function(){
 		// Utility function to query checkboxes to get the results corresponding to checked boxes
 		// NOT USED

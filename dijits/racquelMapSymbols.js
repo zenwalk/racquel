@@ -66,4 +66,7 @@ dojo.declare("racquelDijits.racquelMapSymbols",[],{
 			setOutline(new esri.symbol.SimpleLineSymbol(
 				esri.symbol.SimpleLineSymbol.STYLE_SOLID, new dojo.Color([0, 255, 0]), 1)
 			)
+	,
+	crossHairSymbol:
+		new esri.symbol.PictureMarkerSymbol('http://wlwater.ceh.ac.uk/RACQUEL/images/crosshair.png').setHeight(71).setWidth(75)
 });
