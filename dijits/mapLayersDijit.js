@@ -1,6 +1,7 @@
 dojo.provide("racquelDijits.mapLayersDijit");
 dojo.require("dijit._Widget");
 dojo.require("dijit._Templated");
+dojo.require("esri.dijit.Legend");
 dojo.declare("racquelDijits.mapLayersDijit",[dijit._Widget,dijit._Templated],{
 	widgetsInTemplate:true,
 	templatePath: dojo.moduleUrl("racquelDijits","templates/mapLayersDijit.html"),
@@ -15,34 +16,12 @@ dojo.declare("racquelDijits.mapLayersDijit",[dijit._Widget,dijit._Templated],{
 		// object where keys are integers whose order gives order of adding to map, and value is a 
 		// pair of tiled map service URL/boolean visibility. See default ones below. 
 		// To be added to map in order with first at the bottom etc
-		this.baseLayerUrls = params.baseLayerUrls || [];
-		this.baseLayers = [];
+		this.baseLayerUrls = params.baseLayers || [];
+		this.baseLayerObjects = [];
 		// object where keys are integers, whose order gives order of adding to map, and value is a pair 
 		// of dynamic map service URL / array of visible sublayers
-		this.dynamicLayerUrls = params.dynamicLayerUrls || [];
-		this.dynamicLayers = [];
-		var serverBase = "http://wlwater.ceh.ac.uk/ArcGIS/rest/services/";
-		// if none specified then use default. Specify in order they need to be added to map (lowest first)
-		if (this.baseLayerUrls.length ===0){
-			this.baseLayerUrls.push( 
-				{url:		serverBase+"TileMapLayers/UK_Coastline_Vignetted/MapServer",
-				 name: 		"Coastline",
-				 visible:	true});
-			this.baseLayerUrls.push( 
-				{url:		serverBase+"OSOpendata/OS_Opendata_Backdrop/MapServer",
-				 name:		"OS Maps", 
-				visible:	false});
-			this.baseLayerUrls.push( 
-				{url:		serverBase+"TileMapLayers/UK_Rivers_Cached/MapServer",
-				 name:		"Rivers",
-				 visible: true});
-		}
-		if (this.dynamicLayerUrls.length === 0){
-			this.dynamicLayerUrls.push( 
-				{url:		serverBase+"NRFA_GIS/NRFA_Website_TempService/MapServer",
-				name: 		"Standard NRFA layers",
-				visible:	[-1]});
-		}
+		this.dynamicLayerUrls = params.dynamicLayers || [];
+		this.dynamicLayerObjects = [];
 	},
 	_buildLayers:function(){
 		dojo.forEach(this.baseLayerUrls,dojo.hitch(this,function(baselayerconfig){
@@ -50,7 +29,7 @@ dojo.declare("racquelDijits.mapLayersDijit",[dijit._Widget,dijit._Templated],{
 			 tiledLayer.visible = baselayerconfig.visible;
 			 var layerpair = {};
 			 layerpair[baselayerconfig.name] = tiledLayer;
-			 this.baseLayers.push(layerpair);
+			 this.baseLayerObjects.push(layerpair);
 		}));
 		dojo.forEach(this.dynamicLayerUrls,dojo.hitch(this,function(dynlayerconfig){
 			var dynLayer = new esri.layers.ArcGISDynamicMapServiceLayer(dynlayerconfig.url);
@@ -58,11 +37,11 @@ dojo.declare("racquelDijits.mapLayersDijit",[dijit._Widget,dijit._Templated],{
 			dynLayer.setOpacity(0.7);
 			var layerpair = {};
 			layerpair[dynlayerconfig.name] = dynLayer;
-			this.dynamicLayers.push(layerpair);
+			this.dynamicLayerObjects.push(layerpair);
 		}));
 	},
 	_addLayersToMap:function(){
-		dojo.forEach(this.baseLayers,dojo.hitch(this,function(baseLayerPair){
+		dojo.forEach(this.baseLayerObjects,dojo.hitch(this,function(baseLayerPair){
 			// baseLayerPair is Displayname:layerobject pair
 			// there's only one but we don't know the key
 			for(var v in baseLayerPair){
@@ -71,20 +50,23 @@ dojo.declare("racquelDijits.mapLayersDijit",[dijit._Widget,dijit._Templated],{
 				}
 			}
 		}));
-		dojo.forEach(this.dynamicLayers,dojo.hitch(this,function(dynamicLayerPair){
+		
+		var dynServNum = 1;
+		var dynLayers = [];
+		
+		dojo.forEach(this.dynamicLayerObjects,dojo.hitch(this,function(dynamicLayerPair){
 			for (var v in dynamicLayerPair){
 				if(dynamicLayerPair.hasOwnProperty(v)){
-					this.map.addLayer(dynamicLayerPair[v]);		
+					dynLayers.push(dynamicLayerPair[v]);
 				}
 			}
 		}));
-		// hack to get rivers on top. should probably specify a "ontop" property or something
-		dojo.some(this.baseLayers,dojo.hitch(this,function(baseLayerPair){
-			if (baseLayerPair.hasOwnProperty("Rivers")) {
-				this.map.reorderLayer(baseLayerPair["Rivers"], 99);
-				return true;
+		dojo.connect(this.map,'onLayersAddResult',dojo.hitch(this,function(res){
+			if (!this.legend) {
+				this.buildLegend();
 			}
 		}));
+		this.map.addLayers(dynLayers);
 	},
 	startup:function(){
 		// create the actual layers
@@ -96,7 +78,7 @@ dojo.declare("racquelDijits.mapLayersDijit",[dijit._Widget,dijit._Templated],{
 		this._buildDynamicLayerListWhenLoaded();
 	},
 	_buildBaseLayerList:function(){
-		dojo.forEach(this.baseLayers,dojo.hitch(this,function(baseLayerPair){
+		dojo.forEach(this.baseLayerObjects,dojo.hitch(this,function(baseLayerPair){
 			// for tiled map services we show a single checkbox with the name of the service
 			var label = "";
 			for (var l in baseLayerPair){
@@ -122,7 +104,7 @@ dojo.declare("racquelDijits.mapLayersDijit",[dijit._Widget,dijit._Templated],{
 		}));
 	},
 	_buildDynamicLayerListWhenLoaded:function(){
-		dojo.forEach(this.dynamicLayers,dojo.hitch(this,function(dynLayerPair){
+		dojo.forEach(this.dynamicLayerObjects,dojo.hitch(this,function(dynLayerPair){
 			// each loop is a dynamic map service, that may contain many layers. It's those sublayers we
 			// want to have checkboxes for, not the overall service.
 			var label = "";
@@ -180,9 +162,27 @@ dojo.declare("racquelDijits.mapLayersDijit",[dijit._Widget,dijit._Templated],{
 			}
 		}));
 		this.layersList.appendChild(mapServiceDiv);
+		
+	},
+	buildLegend:function(){
+		if(!this.map){return;}
+		var legLayers = dojo.map(this.dynamicLayerObjects,dojo.hitch(this,function(pair){
+			for (dynServiceName in pair){
+				// don't want to display a title for the overall dynamic service, use a single space string
+				if (pair.hasOwnProperty(dynServiceName)){
+					return {layer:pair[dynServiceName],title:' '};
+				}
+			}
+		}));
+		this.legend = new esri.dijit.Legend({
+			map:this.map,
+			respectCurrentMapScale:true,
+			layerInfos:legLayers
+		},this.legendArea);
+		this.legend.startup();
 	},
 	_updateBaseVisibility:function(label,setOn){
-		dojo.some(this.baseLayers,dojo.hitch(this,function(baseLayerPair){
+		dojo.some(this.baseLayerObjects,dojo.hitch(this,function(baseLayerPair){
 			if(baseLayerPair.hasOwnProperty(label)){
 				baseLayerPair[label].setVisibility(setOn);
 				return true;
@@ -226,5 +226,6 @@ dojo.declare("racquelDijits.mapLayersDijit",[dijit._Widget,dijit._Templated],{
 				layer.setVisibleLayers(finalVisible);
 			}
 		}
+		this.legend.refresh();
 	}
 });

@@ -5,7 +5,7 @@ dojo.declare("racquelDijits.racquelSearchDijit",[],{
 		this.map = params.map || null;
 		this.toolbar = params.racquelToolbar;
 		this.searchEnabled = true;
-		if (this.map){
+		/*if (this.map){
 			//this.mapConnection = dojo.connect(this.map,"onClick",dojo.hitch(this,this.runInteractiveSearch));
 			var currentCentre = this.map.extent.getCenter();
 			var symbol = this.toolbar.racquelMapSymbols.crossHairSymbol;
@@ -22,18 +22,27 @@ dojo.declare("racquelDijits.racquelSearchDijit",[],{
 			dojo.connect(this.map,"onExtentChange",dojo.hitch(this,function(ext){
 				this.crossHairGraphic.setGeometry(ext.getCenter());
 			}));
-		}
+		}*/
 	},
 	runInteractiveSearch:function(evt){
-		var searchPoint = evt.mapPoint;
-		var randomSymbol = new esri.symbol.SimpleMarkerSymbol().setStyle(esri.symbol.SimpleMarkerSymbol.STYLE_CROSS).setSize(12).setColor(new dojo.Color([255, 0, 0, 1])).setOutline(new esri.symbol.SimpleLineSymbol(esri.symbol.SimpleLineSymbol.STYLE_SOLID, new dojo.Color([255, 0, 0]), 1));
-		// generate the searchId number. This will be passed to and returned from all server-side searches
-		// and embedded into the results as a key to access / display / delete them etc
-		var searchId = new Date().getTime();
-		var searchGraphic = new esri.Graphic(searchPoint, randomSymbol,{searchId:searchId});
-		console.log("Initiating searches with id: "+searchId);
-		var params = this.toolbar.racquelInteractiveSettings;
-		this.runSearch(searchGraphic,params);
+		var pixelRes = 
+			this.map.extent.getWidth() / this.map.width;
+		if (pixelRes < 25) {
+			var searchPoint = evt.mapPoint;
+			var randomSymbol = new esri.symbol.SimpleMarkerSymbol().setStyle(esri.symbol.SimpleMarkerSymbol.STYLE_CROSS).setSize(12).setColor(new dojo.Color([255, 0, 0, 1])).setOutline(new esri.symbol.SimpleLineSymbol(esri.symbol.SimpleLineSymbol.STYLE_SOLID, new dojo.Color([255, 0, 0]), 1));
+			// generate the searchId number. This will be passed to and returned from all server-side searches
+			// and embedded into the results as a key to access / display / delete them etc
+			var searchId = new Date().getTime();
+			var searchGraphic = new esri.Graphic(searchPoint, randomSymbol, {
+				searchId: searchId
+			});
+			console.log("Initiating searches with id: " + searchId);
+			var params = this.toolbar.racquelInteractiveSettings;
+			this.runSearch(searchGraphic, params);
+		}
+		else {
+			alert("Please zoom in a little more to run an interactive search!");
+		}
 	},
 	runCrossHairSearch:function(){
 		var searchPoint = this.crossHairGraphic.geometry;
@@ -72,9 +81,6 @@ dojo.declare("racquelDijits.racquelSearchDijit",[],{
 			var catchSearchParams = {
 				searchPoint: searchGraphic,
 				extractionParams: searchParams.getCatchmentParams()
-				//LCM2000: searchParams.doLCM2K(),
-				//Elevation: searchParams.doElev(),
-				//UpstreamLength:searchParams.doUpstream()
 			};
 			var catchSearchDef = this.toolbar.racquelCatchDijit.runCatchmentSearch(catchSearchParams);
 			tasklist.push(catchSearchDef);

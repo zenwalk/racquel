@@ -14,6 +14,7 @@ dojo.declare("racquelDijits.racquelBatchDijit",[dijit._Widget, dijit._Templated]
 		this.osgb = new esri.SpatialReference({wkid:27700});
 		this.batchSymbol = new esri.symbol.SimpleMarkerSymbol().setStyle(esri.symbol.SimpleMarkerSymbol.STYLE_X).setSize(12).setColor(new dojo.Color([255, 0, 255, 1])).setOutline(new esri.symbol.SimpleLineSymbol(esri.symbol.SimpleLineSymbol.STYLE_SOLID, new dojo.Color([255, 0, 0]), 1));
 		this._idsUsed = [];
+		this._searchStatusDiv = dojo.create("div",{});
 	},
 	startup:function(){
 		this.setupDropZone();
@@ -21,6 +22,7 @@ dojo.declare("racquelDijits.racquelBatchDijit",[dijit._Widget, dijit._Templated]
 		dojo.connect(this._batchCloseButton,"onClick",dojo.hitch(this,this.hideDialog));
 		dojo.connect(this._batchCancelButton,"onClick",dojo.hitch(this,this.cancelSearch));
 		dojo.style(this._BatchSearchDialog.closeButtonNode,"display","none");
+		this._controls.domNode.appendChild(this._searchStatusDiv);
 	},
 	setupDropZone:function(){
 		if (!window.File || !window.FileReader){
@@ -116,6 +118,10 @@ dojo.declare("racquelDijits.racquelBatchDijit",[dijit._Widget, dijit._Templated]
 		});
 		this.csvStore.fetch({
 			onComplete: dojo.hitch(this,function(items,request){
+				if (items.length > 50){
+					alert("Sorry, a maximum of 50 features can be read (this is a temporary limitation)");
+					return;
+				}
 				// build grid structure from the first item in the store
 				// first get the attributes into an array
 				var attrs = this.csvStore.getAttributes(items[0])
@@ -178,6 +184,13 @@ dojo.declare("racquelDijits.racquelBatchDijit",[dijit._Widget, dijit._Templated]
 		this._totalRows = this._grid.rowCount;
 		// enable the search
 		this.toolbar.racquelSearchDijit.enableSearch();
+		// record the original settings in the searchSettings so the interactiveSettigns aren't changed
+		// by the search
+		this.searchSettings = this.toolbar.racquelInteractiveSettings;
+		this.origSite = this.searchSettings.doSite();
+		this.origRoute = this.searchSettings.doRoute();
+		this.origCatch = this.searchSettings.doCatchment();
+		
 		// subscribe to the search being enabled, which the searchdijit will do at the end of a search
 		// this will be our indication that it is time to run the next one, if any
 		this._resultStoredSubscription = dojo.subscribe("racquelSearchEnabled",dojo.hitch(this,function(isEnabled){
@@ -224,24 +237,32 @@ dojo.declare("racquelDijits.racquelBatchDijit",[dijit._Widget, dijit._Templated]
 		var doSite = this.csvStore.getValue(storeitem,"SITE","YES");
 		var doRoute = this.csvStore.getValue(storeitem,"ROUTE","YES");
 		var doCatch = this.csvStore.getValue(storeitem,"CATCHMENT","NO");
+		var rowOk = false;
 		var searchPointGraphic,searchParams;
 		if (x && y) {
 			var searchPoint = new esri.geometry.Point(x,y,this.osgb);
 			searchPointGraphic = new esri.Graphic(searchPoint,this.batchSymbol,{searchId:id});
 		}
 		if (doSite && doRoute && doCatch) {
-			searchParams = new racquelDijits.racquelSearchSettings({
-				serviceConfig: this.toolbar.racquelServiceConfig
-			});
-			searchParams.setSite(doSite === "YES");
-			searchParams.setRoute(doRoute === "YES");
-			searchParams.setCatchment(doCatch === "YES");
+			//searchParams = new racquelDijits.racquelSearchSettings({
+			//	serviceConfig: this.toolbar.racquelServiceConfig
+			//});
+			//searchParams.setSite(doSite === "YES");
+			//searchParams.setRoute(doRoute === "YES");
+			//searchParams.setCatchment(doCatch === "YES");
+			this.searchSettings.setSite(doSite ==="YES");
+			this.searchSettings.setRoute(doRoute==="YES");
+			this.searchSettings.setCatchment(doCatch==="YES");
+			rowOk = true;
 		}
-		if (searchPoint && searchParams){
-			this.toolbar.racquelSearchDijit.runSearch(searchPointGraphic,searchParams);
+		if (searchPoint && rowOk){
+			this._searchStatusDiv.innerHTML = "Running search id "+id;
+			this.toolbar.racquelSearchDijit.runSearch(searchPointGraphic,this.searchSettings);
 		}
 		else {
+			this._searchStatusDiv.innerHTML="Error parsing a row - skipped";
 			console.error("Problem parsing a row - skipped.");
+			this.runNextRow();
 		}
 	},
 	_searchesComplete:function(){
@@ -249,7 +270,13 @@ dojo.declare("racquelDijits.racquelBatchDijit",[dijit._Widget, dijit._Templated]
 		dojo.unsubscribe(this._resultStoredSubscription);
 		this._batchCancelButton.disabled=true;
 		this._batchCloseButton.disabled=false;
-		alert("Batch Searches Complete!");
+		this._searchStatusDiv.innerHTML="Batch Searches Complete!";
+		alert("Batch Searches Complete! Results are in the Result Manager.");
+		this._enableDrop();
+		this.searchSettings.setSite(this.origSite);
+		this.searchSettings.setRoute(this.origRoute);
+		this.searchSettings.setCatchment(this.origCatch);
+		
 		console.log("Batch Searches Complete!");
 	},
 	_disableDrop:function(){
