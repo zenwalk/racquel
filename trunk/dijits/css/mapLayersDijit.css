@@ -2,9 +2,10 @@
 	-o-border-radius:3px;
 	-moz-border-radius:3px;
 	-webkit-border-radius:3px;
-	-border-radius:3px;
+	border-radius:3px;
+	font-family:Geneva,Arial,Helvetica,sans-serif;
  }
- ._dynamicLayersDiv,._baseLayersDiv {
+ .mapDijitSection {
         border: solid 1px #7EABCD;
 		padding: 0px 0px 0px 2px;
         background-color:white;
@@ -12,7 +13,7 @@
 		font-size:13pt; 
 		text-align:left;
 		/*width:95%;*/
-		font-family:Geneva,Arial,Helvetica,sans-serif;
+	
       }
 .dynamic_map_service_item{
 	font-size:11pt;
@@ -20,6 +21,14 @@
 	margin:4px;
 	padding:2px;
 }
+.esriLegendLayer{
+		font-size:9pt; 
+		text-align:left;
+}
+.esriLegendLayerLabel{
+	font-size:10pt;
+}
+
 .dynamic_map_layer_item{
 	  	font-size:9pt;
 		position:relative;left:10px;

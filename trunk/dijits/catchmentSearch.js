@@ -3,9 +3,6 @@ dojo.provide("racquelDijits.catchmentSearch");
 dojo.declare("racquelDijits.catchmentSearch",[],{
 	constructor:function(params){
 		this.catchmentService = params.serviceConfig.racquelCatchmentService;
-		//this.soeURL = "http://192.171.192.6/ArcGIS/rest/services/Test/irn_watershed_svc/MapServer/exts/WatershedSOE/createWatershed";
-		
-		//this.ctmSymbol = new esri.symbol.SimpleFillSymbol(esri.symbol.SimpleFillSymbol.STYLE_SOLID, new esri.symbol.SimpleLineSymbol("dashdot", new dojo.Color([255, 0, 0]), 2), new dojo.Color([255, 255, 0, 0.25]));
 	},
 	
 	runCatchmentSearch:function(searchParams){
@@ -23,16 +20,22 @@ dojo.declare("racquelDijits.catchmentSearch",[],{
 		
 		// Build the parameters for the SOE request. The required SOE input parameter names may vary 
 		// so we read them from the service config object
-		var soeIdentifierParam = this.catchmentService.IDParamName;
-		var soeLocationParam = this.catchmentService.LocationParamName;
-		var soeExtentParam = this.catchmentService.ExtentParamName;
+		var soeIdentifierParam = this.catchmentService.FixedInputParams.IDParamName;
+		var soeLocationParam = this.catchmentService.FixedInputParams.LocationParamName;
+		var soeExtentParam = this.catchmentService.FixedInputParams.ExtentParamName;
+		var soeSRParam = this.catchmentService.FixedInputParams.SRParamName;
+		var soeOutputFormatParamName = this.catchmentService.FixedInputParams.OutputFormatParamName;
+		
 		var soeRequestContent = {};
 		//sending a straight number causes the SOE to fail to read as string
 		soeRequestContent[soeIdentifierParam] = "search_"+searchId; 
+		// build the search location as a JSON point
 		soeRequestContent[soeLocationParam] = "{x:"+searchPoint.geometry.x+",y:"+searchPoint.geometry.y+"}";
 		soeRequestContent['f'] = "json"; // assume this one will always be "f"
 		soeRequestContent[soeExtentParam] = analysisExtent;
-		
+		soeRequestContent[soeSRParam] = searchPoint.geometry.spatialReference.wkid;
+		// false = return as json-structured object rather than as attributes on the catchment feature
+		soeRequestContent[soeOutputFormatParamName] = false;
 		for (var extractionparam in searchParams.extractionParams){
 			if (searchParams.extractionParams.hasOwnProperty(extractionparam)){
 				if (searchParams.extractionParams[extractionparam]){
@@ -46,11 +49,12 @@ dojo.declare("racquelDijits.catchmentSearch",[],{
 		var catchSearchDef = new dojo.Deferred();
 		
 		var soeRequestDef = esri.request({
-			url:		this.catchmentService.URL,
+			url:		this.catchmentService.URL+this.catchmentService.createWatershedOperation,
 			content:	soeRequestContent,
 			callbackParamName: "callback",
 			load:		dojo.hitch(this,function(soeResponse){
-							var catchResult = this._processCatchmentResult(soeResponse,searchParams.extractionParams);
+							//var catchResult = this._processCatchmentResult(soeResponse,searchParams.extractionParams);
+							var catchResult = this._processPreStructuredCatchmentResult(soeResponse,searchParams.extractionParams);
 							catchResult.searchLocation = searchPoint;
 							catchSearchDef.callback(catchResult);
 						}),
@@ -61,6 +65,42 @@ dojo.declare("racquelDijits.catchmentSearch",[],{
 		});
 		return catchSearchDef;
 	},
+	/***
+	 * SOE has been extended (since _processCatchmentResult was written) to structure the output
+	 * itself... so we have less to do here now
+	 * 
+	 * @param {Object} soeResponse
+	 * @param {Object} extractionParams
+	 */
+	_processPreStructuredCatchmentResult:function(soeResponse,extractionParams){
+		var geom = soeResponse.geometry;
+		var soe_wkid = soeResponse.output_wkid;
+		var polygon = new esri.geometry.Polygon( new esri.SpatialReference({
+			wkid:soe_wkid
+		}));
+		//
+		for (var j=0,jl=geom.rings.length;j<jl;j++){
+			polygon.addRing(geom.rings[j]);
+		}
+		//polygon.addRing(geom);
+		var returnedSearchId = soeResponse["search_id"].split('_')[1];
+		var ctmGraphic = new esri.Graphic(polygon,null,{
+			'searchId':returnedSearchId
+		});
+		var returnObject = {
+			//searchId:soeResponse["search_id"],
+			searchId:returnedSearchId,
+			successful:true,
+			catchment:ctmGraphic,
+			racquelResultType:"racquelCatchResult",
+			// we don't have to build the structured object any more
+			extractedData:soeResponse["Extractions"],
+			totalArea: soeResponse["total_area"]
+		}
+		console.log("Catchment search completed for id: ")+soeResponse["search_id"];
+		return returnObject;
+	},
+	
 	/***
 	 * Formats the catchment result object returned from the SOE. The SOE returns a polygon with 
 	 * all requested extraction items as direct attributes rather than as nested JSON objects.

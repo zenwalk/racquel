@@ -1,6 +1,9 @@
 dojo.provide("racquelDijits.racquelDataDescriptions");
 // this class is just a place to store dataset class mappings / descriptions
-// All properties are "static" i.e. same across all instantiations as they're not in constructor  
+// All properties are "static" i.e. same across all instantiations as they're not in constructor
+// This class currently must be updated to reflect catgorical raster datasets used in the configured catchment
+// extraction service, if you want the results view to give the description rather than just a class value
+// TODO - extent the describeLayers operation on SOE to retrieve these descriptions at runtime   
 dojo.declare("racquelDijits.racquelDataDescriptions", [], {
     lcm2k: {
         name: "Land Cover Map 2000",
@@ -35,6 +38,21 @@ dojo.declare("racquelDijits.racquelDataDescriptions", [], {
             161: "Inland bare ground"
         }
     },
+	URBX90: {
+		name:"Urban Extent (1990 dataset)",
+		classes:{
+			1: "Suburban",
+			2: "Urban"
+		}
+	},
+	URBX2K: {
+		name:"Urban Extent (2000 dataset)",
+		classes:{
+			1: "Suburban (including arable / horticulture within extent of settlements)",
+			2: "Urban",
+			3: "Inland Bare Ground (within extent of settlements)"
+		}
+	},
     lcm2000aggregate: {
         name: "Land Cover Map 2000 aggregate classes",
         id: "lcm2kagg",

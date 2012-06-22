@@ -1,29 +1,38 @@
 <div id="racquelControlDijit">
-<div dojoType = "dijit.Dialog"  dojoAttachPoint = "_ControlDijitDialog" id = "testdialog" title = "RACQUEL Setup"  >
+<div dojoType = "dijit.Dialog"  dojoAttachPoint = "_ControlDijitDialog" id = "racquelControlDialog" title = "RACQUEL Setup"  >
 <div dojoType = "dijit.layout.ContentPane" dojoAttachPoint = "_ControlDijitContent" id="ctlContent">
-	Please use the checkboxes below to choose what type of RACQUEL Searches you would like to run.
-	<div id="task_items">	
-	<input dojoType='dijit.form.CheckBox' class='task_item'  value=0 dojoAttachPoint = "_ControlDijitSite"/>
-	<label>	At-site info. Identify the properties relating to the input location itself. </label>
-		<br/>
-	<input dojoType='dijit.form.CheckBox' class='task_item' value=1 dojoAttachPoint = "_ControlDijitRoutes"/>
-	<label>	Routes. Find the source and mouth corresponding to the input location, and the route between them. </label>
-		<br/>
-	<input dojoType='dijit.form.CheckBox' class='task_item' dojoAttachPoint = "_ControlDijitCatchment"/>
-	<label>Catchment info. Find the catchment above the input location and extract catchment based information.</label>
-		<div id="racquel_catch_sub_tasks" style="position:relative;left:30px">
-			<input dojoType='dijit.form.CheckBox' class='ctm_sub_task_item' dojoAttachPoint = "_ControlDijitElev"/>
-			<label>Elevation - calculate the minimum, maximum, and mean elevation for the catchment.</label><br/>
-			<input dojoType='dijit.form.CheckBox' class='ctm_sub_task_item'  dojoAttachPoint = "_ControlDijitLCM"/>
-			<label>LCM2000 - summarise the proportion of the catchment covered by each Land Cover Map 2000 class.</label><br/>
-			<input dojoType='dijit.form.CheckBox' class='ctm_sub_task_item'  dojoAttachPoint = "_ControlDijitUpstream"/>
-			<label>Upstream length - calculate the total length of streams / rivers within the catchment.</label><br/>
+	Please use the checkboxes below to choose what type of RACQUEL Searches you would like to run<br/>
+	when an interactive search is performed.<br/>
+	Sub-tasks selected under the catchment extraction subheading will affect batch searches as well.
+	<div class="racquelControlTasks">	
+	<div class="racquelControlTaskItem">
+	<label for="cbControlTaskSite" class="racquelControlTaskLabel">
+	<input dojoType='dijit.form.CheckBox' id="cbControlTaskSite" class='racquelControlTaskItem'  value=0 dojoAttachPoint = "_ControlDijitSite"/>
+		At-site searches. Identify the properties relating to the input location itself.
+	</label> 
+	</div>
+	<div class="racquelControlTaskItem">
+	<label for="cbControlTaskRoutes" class="racquelControlTaskLabel">
+		<input dojoType='dijit.form.CheckBox' id="cbControlTaskRoutes" class='racquelControlTaskItem' value=1 dojoAttachPoint = "_ControlDijitRoutes"/>
+		Routes. Find the river source and tidal limit corresponding to the input location, and identify the river channel route between them.
+	</label>
+	</div>
+	<div class="racquelControlTaskItem">
+	<label for="cbControlTaskCatch" class="racquelControlTaskLabel">
+		<input dojoType='dijit.form.CheckBox' id="cbControlTaskCatch" class='racquelControlTaskItem' dojoAttachPoint = "_ControlDijitCatchment"/>
+		Catchment extraction. Find the catchment draining to the input location and extract catchment based information.
+	</label>
+	</div>
+		<div id="racquel_catch_sub_tasks_label"  class="racquelControlSubTasks">
+			Select which datasets you want to extract information from based on the catchment:
+			<div id="racquel_catch_sub_tasks">
+				
+			</div>
 		</div>
 	</div>
-	<br/>
-	<div id="task_settings">
+	<div id="task_settings" style="display:none;">
 	Other search settings:
-	<br/>	
+	<br/>
 	<input dojoType='dijit.form.CheckBox' class='ctm_sub_task_item' value=2 dojoAttachPoint = "_ControlDijitQC"/>
 			Quality control - if route searches are also run, check that the source is within the catchment generated.
 	<br/>

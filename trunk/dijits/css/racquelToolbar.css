@@ -45,24 +45,124 @@
 	left: 28px;
 	top: 0px;
 }
+#racquel-tools-div{
+	font-family:Geneva,Helvetica,Arial,sans-serif;
+}
+#racquel-tools-label{
+	font-weight:bold;
+	font-size:medium;
+	border-right:dotted 1pt;
+	padding-right:6px;
+	padding-left:6px;
+	padding-bottom:4px;
+}
 .selectVarsIcon {
-    background-image: url(../images/identify.png);
+    background-image: url(../images/settings_24px.png);
     background-repeat: no-repeat;
-    width: 18px;
-    height: 18px;
+    width: 24px;
+    height: 24px;
     text-align: center;
+	
 } 
 .interactiveSearchIcon {
-    background-image: url(../images/identify.png);
+    background-image: url(../images/interactive_24px.png);
     background-repeat: no-repeat;
-    width: 18px;
-    height: 18px;
+    width: 24px;
+    height: 24px;
     text-align: center;
 } 
 .batchSearchIcon {
-    background-image: url(../images/identify.png);
+    background-image: url(../images/batch_24px.png);
     background-repeat: no-repeat;
-    width: 18px;
-    height: 18px;
+    width: 24px;
+    height: 24px;
     text-align: center;
-} 
+}
+.helpIcon{
+    background-image: url(../images/help_24px.png);
+    background-repeat: no-repeat;
+    width: 24px;
+    height: 24px;
+    text-align: center;
+}
+/* Items for the welcome dialog */
+.racquelWelcomeDialog{
+	font-size:13pt!important;
+	color:#485C5A;
+}
+.racquelWelcomeContentHeader{
+	font-weight:bold;
+	background-color:#E7ECF4;
+	margin-top:12px;
+	margin-bottom:4px;
+	padding-left:3px;
+	text-align:center;
+	color:peru;
+}
+.racquelWelcomeContentItem{
+	padding-left:3px;
+}
+.racquelWelcomeContentParagraph{
+	margin-bottom:5px;
+}
+#racquelWelcomeLogo{
+	background-image: url(../images/CEH_PMS_RGB_small.png);
+    background-repeat: no-repeat;
+    width: 482px;
+    height: 121px;
+    text-align: center;
+	padding:3px;
+}
+#racquelWelcomeContentTitle{
+	font-size:larger;
+	font-weight:bold;
+	padding:3px;
+}
+/* Items for the control dialog */
+#racquelControlDialog{
+	font-size:small;
+	color:#485C5A
+}
+label.racquelControlTaskLabel{
+	display:block;
+	padding-left:20px;
+	text-indent:-20px;
+}
+.racquelControlTaskItem input{
+	padding:0px!important;
+	margin:0px!important;
+	width:13px!important;
+	height:13px!important;
+	vertical-align:bottom;
+	position:relative;
+	top:-1px;
+	*overflow:hidden;
+}
+.racquelControlTasks{
+	max-width:650px;
+	border-radius:3px;
+	border: solid 1px #7EABCD;
+    margin-left:20px;
+    margin-right:20px;
+    margin-top:10px;
+    margin-bottom:10px;
+    padding:7px;
+}
+.racquelControlSubTasks{
+	margin-left:20px;
+	border-top:1px dotted;
+	font-style:italic;
+}
+/* Items for several dialogs */
+.outlinedMarginPane{
+	font-family:Geneva,Arial,Helvetica,sans-serif;
+	font-size:10pt;
+	text-align:left;
+	border: solid 1px #7EABCD;
+	margin:5px;
+	padding:5px!important;
+	-o-border-radius:8px;
+	-moz-border-radius:8px;
+	-webkit-border-radius:8px;
+	border-radius:6px;
+}

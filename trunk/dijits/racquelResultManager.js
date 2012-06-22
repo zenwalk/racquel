@@ -7,6 +7,7 @@ dojo.require("dojox.grid.DataGrid");
 dojo.require("dojox.grid.cells.dijit");
 dojo.require("dojo.data.ItemFileWriteStore");
 dojo.require("dojox.layout.FloatingPane");
+dojo.require("dijit.layout.TabContainer");
 dojo.require("racquelDijits.racquelDataDescriptions");
 dojo.declare("racquelDijits.racquelResultManager",[dijit._Widget,dijit._Templated],{
 	widgetsInTemplate:true,
@@ -33,6 +34,14 @@ dojo.declare("racquelDijits.racquelResultManager",[dijit._Widget,dijit._Template
 		}
 		//this._VisibleSearchList=[];
 		this.toolbar = params.racquelToolbar;
+		// define a text formatting function on string prototype (used to format field names from capitals)
+		if (!String.prototype.toProperCase) {
+			String.prototype.toProperCase = function(){
+				return this.replace(/\w\S*/g, function(txt){
+					return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase();
+				});
+			};
+		}	
 	},
 	startup:function(){
 		this._grid.startup();
@@ -53,6 +62,7 @@ dojo.declare("racquelDijits.racquelResultManager",[dijit._Widget,dijit._Template
 			//this.fwSize = this._getSize(this.floatingWindow.domNode);
 			this.fwSize = dojo.coords(this.floatingWindow.domNode);
 			this.floatingWindow._naturalState = this.fwSize;
+			dojo.connect(this.floatingWindow,"onShow",dojo.hitch(this,this._refreshChecks));
 		}
 		// listen out for a search result being stored (by search dijit, into toolbar's resultstore). 
 		// When there is one, retrieve it and show it
@@ -81,6 +91,7 @@ dojo.declare("racquelDijits.racquelResultManager",[dijit._Widget,dijit._Template
 		dojo.forEach(existingSearches, dojo.hitch(this,function(searchIdx){
 			this._addResultToGrid(searchIdx);
 		}));
+		
 	},
 	postCreate:function(){
 		// ensure that the grid's formatter functions (to make checkboxes etc) execute in the scope of this
@@ -120,6 +131,27 @@ dojo.declare("racquelDijits.racquelResultManager",[dijit._Widget,dijit._Template
 		this.store.newItem(newjson);
 		//this._grid.render();
 		this.store.save();
+		//this._refreshChecks();
+	},
+	_refreshChecks:function(){
+		// checkboxes seemingly often get cleared so they get out of sync with what's on the map
+		// call this every time something that seems to trigger this behaviour occurs 
+		console.log("restored floatingwindows");
+		var mapCheckBoxes = dojo.query(".racquelResultShowMapCB");
+		var currentShowingGraphicIds = dojo.map(this._graphicsLayer.graphics,dojo.hitch(this,function(graphic){
+			return graphic.attributes['searchId'];
+		}));
+		dojo.forEach(mapCheckBoxes,dojo.hitch(this,function(checkBoxInnards){
+			var checkBox = dijit.getEnclosingWidget(checkBoxInnards);
+			var srchId = checkBox.id.replace("cbMapResult_","");
+			if (currentShowingGraphicIds.indexOf(srchId)===-1){
+				checkBox.set('checked',false);
+			}
+			else {
+				checkBox.set('checked',true);
+			}
+		}));
+		// checkboxes do not stay in sync with what is on the map
 	},
 	_clearAllResults:function(){
 		// delete all rows from the grid and all graphics from the map
@@ -185,15 +217,21 @@ dojo.declare("racquelDijits.racquelResultManager",[dijit._Widget,dijit._Template
 		// this function receives the whole store item (field is defined in template as _item), 
 		// not just a field.
 		if (storeitem.Route[0] || storeitem.Catchment[0]){
+		
 		var cb = new dijit.form.CheckBox({
 			name:"checkBox",
 			value:"blah",
 			checked: storeitem.Show[0], // will always not be shown initially
-			onChange: dojo.hitch(this,function(){
+			onChange: dojo.hitch(this,function(checkedState){
 				this._showHideResults(storeitem.SearchId[0]);
+				this.store.setValue(storeitem,"Show",checkedState);
+				//storeitem.Show[0] = this.checked;
 			}),
-			title: "Show / hide these results on the map"
+			title: "Show / hide these results on the map",
+			//id:"cbMapResult_"+storeitem.SearchId[0]
 		}, "checkBox");
+		//dojo.addClass(cb.domNode,"racquelResultShowMapCB");
+		//cb.startup();
 		return cb;
 		}
 		else{
@@ -262,6 +300,7 @@ dojo.declare("racquelDijits.racquelResultManager",[dijit._Widget,dijit._Template
 				this._graphicsLayer.add(item.netLocation.setAttributes({"searchId":searchId}).
 										setSymbol(this.toolbar.racquelMapSymbols.locatedPointSymbol));					
 			}
+			
 		}
 		else
 		{
@@ -297,47 +336,69 @@ dojo.declare("racquelDijits.racquelResultManager",[dijit._Widget,dijit._Template
 			riverName = racquelResultItem.routeResult.riverSegment.attributes["OS_NAME"];
 		}
 		var summaryTxt;
-		if (riverName=="N/A") {
-			summaryTxt = "Results of search at "
+		if (riverName=="Un-named" || riverName=="N/A") {
+			summaryTxt = "Results of RACQUEL search at location "
 		}
 		else {
-			summaryTxt = "Results of search on "+riverName+" at "
+			summaryTxt = "Results of RACQUEL search on "+riverName+" at location "
 		}
 		summaryTxt = summaryTxt + this._getGridCoords(searchLocation);
 		var resultPane = new dijit.layout.ContentPane({
 			title:				riverName,
-			doLayout:			true,
+			doLayout:			false,
 			className: "racquelResultPane",
 			id:					"racquelResultPane"+searchId 
 		});
-		var summaryDiv = dojo.create('div',{innerHTML:summaryTxt},resultPane.domNode);		
-		if (routeExists !== null){
-			resultPane.domNode.appendChild(this._formatReachResult(racquelResultItem['routeResult']['riverSegment']));
-		}
+		var summaryDiv = dojo.create('div',{
+				innerHTML:summaryTxt,
+				className:"racquelResultOverallTitle"
+		});	
+		dojo.addClass(summaryDiv,"racquelResultSection");
+		resultPane.domNode.appendChild(summaryDiv);
+		var tabDiv = dojo.create("div",{
+		});	
+		var tabs = new dijit.layout.TabContainer({
+			doLayout:false
+		});
+		//if (routeExists !== null){
+		//	resultPane.domNode.appendChild(this._formatReachResult(racquelResultItem['routeResult']['riverSegment']));
+		//}
 		if (siteExists !== null) {
-			resultPane.domNode.appendChild(this._formatSiteResult(racquelResultItem['siteResult']));
+			var siteContent = new dijit.layout.ContentPane({
+				title:"At-site searches",
+				content:this._formatSiteResult(racquelResultItem['siteResult']),
+				style:"overflow:auto;max-height:500px;"
+			});
+			tabs.addChild(siteContent);
 		}
 		if (routeExists !== null) {
-			resultPane.domNode.appendChild(this._formatRouteResult(racquelResultItem['routeResult']));
+			var routeContent = new dijit.layout.ContentPane({
+				title:"River searches",
+				content:this._formatReachResult(racquelResultItem['routeResult']['riverSegment']),
+				style:"overflow:auto;max-height:500px;"
+			});
+			routeContent.domNode.appendChild(this._formatRouteResult(racquelResultItem['routeResult']));
+			tabs.addChild(routeContent);
 		}
 		if (catchExists !== null) {
-			//if (routeExists !== null) {
-				//resultPane.domNode.appendChild(this._formatCatchResult(racquelResultItem['catchResults'],
-					//racquelResultItem['routeResult']['source']));
-			//}
-			//else {
-				resultPane.domNode.appendChild(this._formatCatchResult(racquelResultItem['catchResults']));
-			//}
+			var catchContent = new dijit.layout.ContentPane({
+				title:"Catchment searches",
+				content:this._formatCatchResult(racquelResultItem['catchResults']),
+				style:"overflow:auto;max-height:500px;"
+			});
+			tabs.addChild(catchContent);
 		}
+		tabDiv.appendChild(tabs.domNode);
+		resultPane.domNode.appendChild(tabDiv);
 		var okButton = new dijit.form.Button({
 			label:"OK",
 			onClick: dojo.hitch(this,function(){
 				dialog.destroyRecursive();
-			})
+			}),
+			className:"racquelResultDialogButton"
 		});
 		okButton.startup();
 		dojo.place(okButton.domNode,resultPane.domNode,"last"); 
-		
 		resultPane.startup();
 		var dialog = new dijit.Dialog({
 			title: "Result details",
@@ -353,70 +414,224 @@ dojo.declare("racquelDijits.racquelResultManager",[dijit._Widget,dijit._Template
 		dialog.startup();
 		dialog.show();
 	},
+	_getResultHTML:function(searchId){
+		var html = "<html><head>RACQUEL Search Result";
+		var css = "<style type='text/css'>"+ 
+			".racquelResultSection{"+
+			"-o-border-radius:3px;-moz-border-radius:3px;-webkit-border-radius:3px;border-radius:3px;"+
+			"border: solid 1px #7EABCD;	padding: 2px 2px 2px 2px;margin: 0px 2px 3px 2px;background-color:white;"+
+			"font-family: Geneva,Arial,Helvetica,sans-serif;font-size:10pt;	color:#485C5A;max-width:750px;}"+
+			".racquelResultOverallTitle{font-size:12pt;}"+
+			".racquelResultSectionTitle{font-weight:bold;font-size:12pt;color:peru;}"+
+			".racquelResultsLayerTitle{font-weight:bold;background-color:#E7ECF4;margin-top:12px;margin-bottom:4px;"+
+			"padding-left:3px;text-align:center;color:peru;}"+
+			".racquelResultsLayerItem{padding-left:3px;}"+
+			".racquelResultSection table{border: thin 1px #EEEEEE;background-color:white;margin:3px;margin-top:6px;}"+
+			".racquelResultSection td{border: hidden;}"+
+			".racquelResultSection th{border-bottom:thin 2px;border-top:none;border-left:none;border-right:none;color:peru;"+
+			"</style>"
+		html += css + "</head><body>";
+		var racquelResultItem = this.toolbar.racquelResultStore.getWholeResult(searchId);
+		var siteExists=null,routeExists=null,catchExists=null;
+		if (racquelResultItem.hasOwnProperty('siteResult')){
+			siteExists = racquelResultItem.siteResult.successful;
+		}
+		if (racquelResultItem.hasOwnProperty('routeResult')){
+			routeExists = racquelResultItem.routeResult.successful;
+		}
+		if (racquelResultItem.hasOwnProperty('catchResults')){
+			catchExists = racquelResultItem.catchResults.successful;
+		};
+		// now the ..exists are true / false for success, or null if not done
+		var riverName = "N/A"
+		var searchLocation = racquelResultItem.searchLocation;
+		if (routeExists) {
+			riverName = racquelResultItem.routeResult.riverSegment.attributes["OS_NAME"];
+		}
+		var summaryTxt;
+		if (riverName=="Un-named" || riverName=="N/A") {
+			summaryTxt = "Results of RACQUEL search at location "
+		}
+		else {
+			summaryTxt = "Results of RACQUEL search on "+riverName+" at location "
+		}
+		summaryTxt = summaryTxt + this._getGridCoords(searchLocation);
+		var summaryDiv = dojo.create('div',{
+				innerHTML:summaryTxt,
+				className:"racquelResultOverallTitle"
+		});	
+		dojo.addClass(summaryDiv,"racquelResultSection");
+		var tempDiv = dojo.create("div");
+		tempDiv.appendChild(summaryDiv);
+		if (siteExists !== null) {
+			var siteDiv = this._formatSiteResult(racquelResultItem['siteResult']);
+			tempDiv.appendChild(siteDiv);
+		}
+		if (routeExists !== null) {
+			var reachDiv = this._formatReachResult(racquelResultItem['routeResult']['riverSegment']);
+			tempDiv.appendChild(reachDiv);
+			var routeDiv = this._formatRouteResult(racquelResultItem['routeResult']);
+			tempDiv.appendChild(routeDiv);
+		}
+		if (catchExists !== null) {
+			var catchDiv = this._formatCatchResult(racquelResultItem['catchResults']);
+			tempDiv.appendChild(catchDiv);
+		}
+		html += tempDiv.innerHTML;
+		return html;
+	},
 	_formatReachResult:function(riverReachGraphic){
-		var contents = "Selected river reach:<br/>";
+		var div = dojo.create("div",{
+			className:"racquelResultSection"
+		});
+		var titleDiv = dojo.create("div",{
+			innerHTML:"Selected river reach",
+			className:"racquelResultSectionTitle"
+		});
+		div.appendChild(titleDiv);
+		var summaryDiv = dojo.create("div",{
+			className:"racquelResultsLayerItem"
+		});
+		var rivName = riverReachGraphic.attributes["OS_NAME"];
+		if (rivName == "Un-named" || rivName =="N/A" ){
+			summaryDiv.innerHTML = "The selected reach has no name recorded in the data.";
+		}
+		else {
+			summaryDiv.innerHTML = "The selected reach is on the "+rivName+".";
+		}
+		div.appendChild(summaryDiv);
+		div.appendChild(dojo.create("div",{
+			className:"racquelResultsLayerItem",
+			innerHTML: "The following attributes apply to this specific reach:"
+		}));
+		var tableContents = "";
 		if (riverReachGraphic.attributes.hasOwnProperty('STRAHLER')){
-			contents += "Strahler stream order:  " + riverReachGraphic.attributes['STRAHLER'] +"<br/>";
+			tableContents += "<tr><td>Strahler stream order:</td><td>" + riverReachGraphic.attributes['STRAHLER'] +"</td></tr>";
 		}
 		if (riverReachGraphic.attributes.hasOwnProperty('SHREVE')){
-			contents += "Shreve stream order:  " + riverReachGraphic.attributes['SHREVE']+"<br/>";
+			tableContents += "<tr><td>Shreve stream order:</td><td>" + riverReachGraphic.attributes['SHREVE']+"</td></tr>";
 		}
 		if (riverReachGraphic.attributes.hasOwnProperty('WORK_')){
-			contents += "Capital works:  " + riverReachGraphic.attributes['WORK_'];
+			tableContents += "<tr><td>Capital works:</td><td>" + riverReachGraphic.attributes['WORK_'];
 			if (riverReachGraphic.attributes['WORK_']==="Capital"){
-				contents += " (" + riverReachGraphic.attributes['WORKTYPE']+")";
-			}	
+				tableContents += " (" + riverReachGraphic.attributes['WORKTYPE']+")";
+			}
+			tableContents += "</td></tr>";
 		}
-		var div = dojo.create("div",{innerHTML:contents});
+		if (tableContents.length > 0){
+			div.appendChild(dojo.create("div",{
+				innerHTML: "<table border='1'>"+tableContents+"</table>",
+				className:"racquelResultsLayerItem"
+			}));
+		}
 		return div;
 	},
 	_formatSiteResult:function(siteResultItem){
-		var contents = "<H3>At-site results</H3>";
+		var div = dojo.create("div",{
+			className:"racquelResultSection"
+		});
+		var titleDiv = dojo.create("div",{
+			innerHTML:"At-site results",
+			className:"racquelResultSectionTitle"
+		});
+		div.appendChild(titleDiv);
+		//var contents = "<H3>At-site results</H3>";
+		var summaryDiv = dojo.create("div",{
+			className:"racquelResultsLayerItem"
+		});
 		if (!siteResultItem.successful){
-			contents += "At site searches were not successful!"
+			//contents += "At site searches were not successful!"
+			summaryDiv.innerHTML = "Sorry, at-site searches were not successful!"
+			div.appendChild(summaryDiv);
 		}
 		else {
-			contents += "<table border ='1'><tr><th>Layer</th><th>Site value</th></tr>";
+			summaryDiv.innerHTML = "The following table summarises the features found at the input location";
+			div.appendChild(summaryDiv);
+			var tableContents = 
+				"<table border ='1'><tr><th>Layer</th><th>Site value</th></tr>";
             for (var i in siteResultItem.results)
 			{
 				if (siteResultItem.results.hasOwnProperty(i)){
-					contents += "<tr><td>" + i + "</td><td>" + siteResultItem.results[i] + "</td></tr>";
+					tableContents += "<tr><td>" + i + "</td><td>" + siteResultItem.results[i] + "</td></tr>";
 				}
 			}
-			contents += "</table>";
+			tableContents += "</table>";
+			div.appendChild(dojo.create("div",{
+				innerHTML:tableContents,
+				className:"racquelResultsLayerItem"
+			}));
 		}
-		var div = dojo.create("div",{
-			innerHTML:contents,
-			className:"racquelResultSection"});
 		return div;
 	},
 	_formatRouteResult:function(routeResultItem){
-		var contents = "<H3>River routing results</H3>";
+		var div = dojo.create("div",{
+			className:"racquelResultSection"
+		});
+		var titleDiv = dojo.create("div",{
+			innerHTML:"River routing results",
+			className:"racquelResultSectionTitle"
+		});
+		div.appendChild(titleDiv);
+		var summaryDiv = dojo.create("div",{
+			className:"racquelResultsLayerItem"
+		});
+		
 		if (!routeResultItem.successful){
-			contents += "River searches were not successful!"
+			summaryDiv.innerHTML = "River routing search was not successful! <br/>"+
+				"Please note that maximum snapping distance from the input location is 250m <br/>"+
+				"and the river network does not extend downstream of the tidal limit."
+			div.appendChild(summaryDiv);
+			//contents += "River searches were not successful!"
 		}
 		else {
 			var searchPt = routeResultItem.searchLocation.geometry;
 			var locPt = routeResultItem.netLocation.geometry;
 			var distance = Math.sqrt((searchPt.x - locPt.x)*(searchPt.x-locPt.x)+(searchPt.y-locPt.y)*(searchPt.y-locPt.y));
-			contents += "Input location was snapped to on-channel location of "+Math.round(locPt.x) + "," + Math.round(locPt.y)+"<br/>";
-			contents += "This is "+Math.round(distance)+"m from the input location.";
-			contents += "<table border ='1'><tr><th>Route attribute</th><th>Value</th></tr>";
-    		contents += "<tr><td>Distance from source (km)</td><td>" + Math.round((routeResultItem.sourceRoute.attributes.Total_length/1000)*1000)/1000 + "</td></tr>";
-    		contents += "<tr><td>Source location</td><td>" + Math.round(routeResultItem.source.geometry.x) + "," + Math.round(routeResultItem.source.geometry.y) + "</td></tr>";
-    		contents += "<tr><td>Distance to mouth (km)</td><td>" + Math.round((routeResultItem.mouthRoute.attributes.Total_length/1000)*1000)/1000 + "</td></tr>";
-    		contents += "<tr><td>Mouth location</td><td>" + Math.round(routeResultItem.mouth.geometry.x) + "," + Math.round(routeResultItem.mouth.geometry.y) + "</td></tr></table>";
-    	}
-		var div = dojo.create("div",{
-			innerHTML:contents,
-			className:"racquelResultSection"
-		});
+			summaryDiv.appendChild(dojo.create("div",{
+				innerHTML: "The input location was snapped to on-channel location of "+
+					Math.round(locPt.x) + "," + Math.round(locPt.y)
+			}));
+			summaryDiv.appendChild(dojo.create("div",{
+				innerHTML: "This is "+Math.round(distance)+"m from the input location."
+			}));
+			div.appendChild(summaryDiv);
+			//contents += "Input location was snapped to on-channel location of "+Math.round(locPt.x) + "," + Math.round(locPt.y)+"<br/>";
+			//contents += "This is "+Math.round(distance)+"m from the input location.";
+			var tableContents = 
+						  	"<table border ='1'><tr><th>Route attribute</th><th>Value</th></tr>";
+    		tableContents += "<tr><td>Distance along river channel from source (km)</td><td>" + 
+				Math.round((routeResultItem.sourceRoute.attributes.Total_length/1000)*1000)/1000 + "</td></tr>";
+    		tableContents += "<tr><td>Source location coordinates (Easting, Northing)</td><td>" + 
+				Math.round(routeResultItem.source.geometry.x) + "," + Math.round(routeResultItem.source.geometry.y) + "</td></tr>";
+    		tableContents += "<tr><td>Distance along river channel to tidal limit (km)</td><td>" + 
+				Math.round((routeResultItem.mouthRoute.attributes.Total_length/1000)*1000)/1000 + "</td></tr>";
+    		tableContents += "<tr><td>Mouth location coordinates (Easting, Northing) </td><td>" + 
+				Math.round(routeResultItem.mouth.geometry.x) + "," + Math.round(routeResultItem.mouth.geometry.y) + "</td></tr></table>";
+    		div.appendChild(dojo.create("div",{
+				innerHTML:tableContents,
+				className:"racquelResultsLayerItem"
+			}));
+		}
 		return div;
 	},
 	_formatCatchResult:function(catchResultItem){
-		var contents = "<H3>Catchment definition results</H3>";
+		var div = dojo.create("div",{
+			//innerHTML:contents,
+			className:"racquelResultSection"
+		});
+		var titleDiv = dojo.create("div",{
+			innerHTML:"Catchment definition results",
+			className:"racquelResultSectionTitle"
+		});
+		div.appendChild(titleDiv);
+		//var contents = "<H3>Catchment definition results</H3>";
+		var summaryDiv = dojo.create("div",{
+			className:"racquelResultsLayerItem"
+		});
 		if (!catchResultItem.successful) {
-			contents += "Catchment definition / extraction was not successful!"
+			summaryDiv.innerHTML = "Catchment definition / extraction was not successful!";
+			div.appendChild(summaryDiv);
+			//contents += "Catchment definition / extraction was not successful!"
 		}
 		else {
 			var data = catchResultItem["extractedData"];
@@ -431,60 +646,289 @@ dojo.declare("racquelDijits.racquelResultManager",[dijit._Widget,dijit._Template
 					//contents += "Catchment area is " + catchArea + "sq km.<br/>";
 				}
 			} 
-			// QC catchment here for now. Needs to move to search dijit so it works with batch search.
 			if (catchResultItem.catchmentQC){
 				if (catchResultItem.catchmentQC == "QC_OK"){
-					contents += "QC: OK (Source point is within catchment)<br/>";
+					summaryDiv.appendChild(dojo.create("div",{
+						innerHTML:"Quality Control: OK (Source point is within catchment)"
+					}));
 				}
 				else{
-					contents += "QC: WARNING! Source point is not within catchment. Please check visually<br/>";
+					summaryDiv.appendChild(dojo.create("div",{
+						innerHTML: "Quality Control: WARNING! Source point is not within catchment."
+					}));
+					summaryDiv.appendChild(dojo.create("div",{
+						innerHTML: "This may mean that the river network does not follow the topography - for example where "+
+							"there are artificial channels or culverts linking catchments. Or "+
+							"the data used to define the catchment may not accurately reflect the topography."
+					}));
+					summaryDiv.appendChild(dojo.create("div",{
+						innerHTML: "Alternatively the river may be on the secondary part of a bifurcated section"+
+							"."
+					}));
+					summaryDiv.appendChild(dojo.create("div",{
+						innerHTML: "Please check the results on the map."
+					}));
 				}
 			}
 			else{
-				contents += "QC: Catchment not quality controlled as route search was not done or not successful<br/>";
+				summaryDiv.appendChild(
+					dojo.create("div",{
+						innerHTML: "Quality Control: Catchment not quality controlled as route search was not done or not successful"
+				}))
+				//contents += "QC: Catchment not quality controlled as route search was not done or not successful<br/>";
 			}
+			summaryDiv.appendChild(dojo.create("div",{
+				innerHTML: "Total catchment area is "+
+				Math.round((catchResultItem["totalArea"]/1000000)*1000)/1000 + " sq km"
+			}));
+			//contents += "Total catchment area is "+
+			//	Math.round((catchResultItem["totalArea"]/1000000)*1000)/1000 + " sq km<br/>";
 			// now do those in AvailableExtractionParams
 			// we're not sorting them - they may not always appear in same order. easy enough to sort if 
 			// anyone moans though
-			for (var possibleParamName in config["AvailableExtractionParams"]){
+			
+			var contents = "";
+			var resultsDiv = dojo.create("div",{
+				className:"racquelResultsDetail"
+			});
+			var allPossibleExtractions = this.toolbar.racquelInteractiveSettings.getAvailableParams();
+			for (var possibleParamName in allPossibleExtractions){
 				if (data.hasOwnProperty(possibleParamName)){
-					var parameterDetails = config["AvailableExtractionParams"][possibleParamName];
-					if (parameterDetails.type === "Literal"){
+					var parameterDetails = allPossibleExtractions[possibleParamName];
+					if (parameterDetails.ExtractionType === "Literal"){
 						contents += parameterDetails["name"]+": ";
 						contents += (Math.round((data[possibleParamName])*1000)/1000) + "<br/>"; 
 					}
-					else if (parameterDetails.type === "Continuous"){
-						contents += "<h4>" + parameterDetails["name"] + "</h4>";
-						var max = Math.round(((data[possibleParamName]["Max"])/10)*10)/10;
-						var min = Math.round(((data[possibleParamName]["Min"])/10)*10)/10;
-						var mean = Math.round(((data[possibleParamName]["Mean"])/10)*10)/10;
-						contents += "Maximum: "+max+ "<br/>";
-						contents += "Minimum: "+min+ "<br/>";
-						contents += "Average: "+mean+"<br/>";
+					else if (parameterDetails.ExtractionType === "ContinuousRaster"){
+						resultsDiv.appendChild(dojo.create("div",{
+							innerHTML:parameterDetails["LayerName"],
+							className: "racquelResultsLayerTitle"
+						}));
+						//contents += "<h4>" + parameterDetails["LayerName"] + "</h4>";
+						// choose the number of decimal places based on the range of values returned
+						// 3 dp for range <10, 2 dp for 10-100, 1dp for 100-1000, 0dp over 1000 
+						// - TODO: is this a problem, seeing as it max give different results for different
+						// catchments? I think not, it is relatively rare that the range in the results will
+						// not be of the same order of magnitude as overall data
+						var range = data[possibleParamName]["Results"]["Max"] - data[possibleParamName]["Results"]["Min"];
+						var sigs = Math.max (0,4 - 
+							parseInt(range).toString().length);
+						var maxVal = data[possibleParamName]["Results"]["Max"];
+						var minVal = data[possibleParamName]["Results"]["Min"];
+						var meanVal = data[possibleParamName]["Results"]["Mean"];
+						var max = maxVal.toFixed(sigs); // nb output is string
+						var min = minVal.toFixed(sigs);
+						var mean = meanVal.toFixed(sigs);
+						//var max = Math.round(((data[possibleParamName]["Results"]["Max"])/10)*10)/10;
+						//var min = Math.round(((data[possibleParamName]["Results"]["Min"])/10)*10)/10;
+						//var mean = Math.round(((data[possibleParamName]["Results"]["Mean"])/10)*10)/10;
+						var tableContents = "<table border='1'><tr><th colspan=2>Summary of data in catchment</th></tr>";
+						tableContents += "<tr><td>Maximum value</td><td>"+max+"</td></tr>";
+						tableContents += "<tr><td>Minimum value</td><td>"+min+"</td></tr>";
+						tableContents += "<tr><td>Average (mean) value</td><td>"+mean+"</td></tr>";
+						tableContents += "</table>"
+						resultsDiv.appendChild(dojo.create("div",{
+							innerHTML: 	tableContents,
+							className: "racquelResultsLayerItem"
+						}));
 					}
-					else if (parameterDetails.type === "Categorical"){
-						contents += "<table border='1'><tr><th colspan=2>" + parameterDetails["name"] + "</th></tr>";
-						var classes = describer.lcm2k.classes;
-						for (var dataClass in data[possibleParamName]){
-							if (data[possibleParamName].hasOwnProperty(dataClass)){
-								// round if necessary 
-								var value = Math.round((data[possibleParamName][dataClass])*100)/100;
-								contents += "<tr><td>";
-								contents += "Class "+dataClass+ " ("+ classes[dataClass] + ")</td>";
-								contents += "<td>" + value + "%</td></tr>";
-							}
+					else if (parameterDetails.ExtractionType === "CategoricalRaster"){
+						//contents += "<table border='1'><tr><th colspan=2>" + parameterDetails["LayerName"] + "</th></tr>";
+						resultsDiv.appendChild(dojo.create("div",{
+							innerHTML:parameterDetails["LayerName"],
+							className: "racquelResultsLayerTitle"
+						}));
+						var tableContents = "<table border='1'><tr><th colspan=2>Summary by class (raster value)</th></tr>";
+						var sortedClasses = this._propsToSortedArray(data[possibleParamName]["Results"]);
+						if (sortedClasses.length == 0) {
+							tableContents = "No cells were extracted from the raster! Maybe the cell size<br/>" +
+							"is bigger than the catchment";
 						}
-						contents += "</table>";
+						else {
+							//for (var dataClass in data[possibleParamName]["Results"]){
+							for (var classIdx = 0; classIdx < sortedClasses.length; classIdx++) {
+								var dataClass = sortedClasses[classIdx][0];
+								var dataVal = Math.round((sortedClasses[classIdx][1]) * 100) / 100;
+								var classes;
+								if (describer[possibleParamName] && describer[possibleParamName]["classes"]) {
+									classes = describer[possibleParamName]["classes"];
+								}
+								if (data[possibleParamName]["Results"].hasOwnProperty(dataClass)) {
+									// round if necessary 
+									//var value = Math.round((data[possibleParamName]["Results"][dataClass])*100)/100;
+									tableContents += "<tr><td>";
+									tableContents += "Class " + dataClass
+									if (classes && classes[dataClass]) {
+										tableContents += " (" + classes[dataClass] + ")";
+									}
+									tableContents += "</td>";
+									tableContents += "<td>" + dataVal + "%</td></tr>";
+								}
+							}
+							tableContents += "</table>";
+						}
+						resultsDiv.appendChild(dojo.create("div",{
+							innerHTML:tableContents,
+							className:"racquelResultsLayerItem"
+						}));
+					}
+					else if (parameterDetails.ExtractionType === "PointFeatures"){
+						resultsDiv.appendChild(dojo.create("div",{
+							innerHTML: parameterDetails["LayerName"],
+							className: "racquelResultsLayerTitle"
+						}))
+						//contents += "<h4>" + parameterDetails["LayerName"] + "</h4>";
+						var numFeats = data[possibleParamName]["Results"]["Count"];
+						var itemDiv = dojo.create("div",{
+							className:"racquelResultsLayerItem"
+						});
+						itemDiv.appendChild(dojo.create("div",{
+							innerHTML:"Total number of features found within catchment: "+numFeats
+						}));
+						//contents += "Number of features found within catchment: "+numFeats+ "<br/>";
+						var cats = data[possibleParamName]["Results"]["Categories"];
+						var categoryContent = "";
+						var sortedCats = this._propsToSortedArray(cats);
+						var numCats = sortedCats.length;
+						//for (var category in cats){
+						for (var catIdx=0;catIdx<sortedCats.length;catIdx++){
+							var cat = sortedCats[catIdx][0];
+							var catData = sortedCats[catIdx][1];
+							var catCount = catData["Count"];
+							//if (cats.hasOwnProperty(category)){
+							//	var catcount = cats[category]["Count"];
+								//var catlength = Math.round((cats[category]["Length"])*100)/100;
+							categoryContent += "<tr><td>" + cat+"</td>";
+							categoryContent += "<td>"+catCount+"</td></tr>";
+								//categoryContent += "<td>"+catlength+"</td></tr>";
+					//		}
+						}
+						if (numCats > 0){
+							var categoryFieldName = parameterDetails["CategoryField"].toProperCase();
+							//contents +=
+							itemDiv.appendChild (dojo.create("div",{
+								innerHTML: "<table border='1'><tr><th colspan=2>Summarised by category field '"+categoryFieldName+"'</th></tr>" +
+								"<tr><th>"+categoryFieldName+"</th><th>Feature count</th></tr>" +
+								categoryContent +
+								"</table>" 
+							}));
+						}
+						resultsDiv.appendChild(itemDiv);
+					}
+					else if (parameterDetails.ExtractionType === "LineFeatures"){
+						resultsDiv.appendChild(dojo.create("div",{
+							innerHTML:parameterDetails["LayerName"],
+							className:"racquelResultsLayerTitle"
+						}));
+						//contents += "<h4>" + parameterDetails["LayerName"] + "</h4>";
+						var count = data[possibleParamName]["Results"]["Count"];
+						var length = Math.round((data[possibleParamName]["Results"]["Length"]/1000)*100)/100;
+						var itemDiv = dojo.create("div",{
+							className:"racquelResultsLayerItem"
+						});
+						itemDiv.appendChild(dojo.create("div",{
+							innerHTML: "Total length of features within catchment: "+length+ " km"
+						}));
+						itemDiv.appendChild(dojo.create("div",{
+							innerHTML: "Total number of features within or partially within catchment: "+count
+						}));
+						//contents += "Total length of features within catchment: "+length+ " km<br/>";
+						//contents += "Total number of features within or partially within catchment: "+count+ "<br/>";
+						var cats = data[possibleParamName]["Results"]["Categories"]
+						var categoryContent = ""
+						var sortedCats = this._propsToSortedArray(cats);
+						var numCats = sortedCats.length;
+						for (var catIdx=0;catIdx<sortedCats.length;catIdx++){
+						//for (var category in cats){
+							var cat = sortedCats[catIdx][0];
+							var catData = sortedCats[catIdx][1];
+							var catCount = catData["Count"];
+							var catLength = Math.round((catData["Length"]/1000)*100)/100;
+							//if (cats.hasOwnProperty(category)){
+								//var catcount = cats[category]["Count"];
+								//var catlength = Math.round((cats[category]["Length"]/1000)*100)/100;
+							categoryContent += "<tr><td>" + cat+"</td>";
+							categoryContent += "<td>"+catCount+"</td>";
+							categoryContent += "<td>"+catLength+"</td></tr>";
+							//}
+						}
+						if (numCats>0){
+							var categoryFieldName = parameterDetails["CategoryField"].toProperCase();
+							itemDiv.appendChild(dojo.create("div",{
+								innerHTML:"<table border='1'><tr><th colspan=3>Summarised by category field '"+categoryFieldName+"'</th></tr>" +
+								"<tr><th>"+categoryFieldName+"</th><th>Feature count</th><th>Length (km)</th>" +
+								categoryContent +
+								"</table>" 
+							}));
+						}
+						resultsDiv.appendChild(itemDiv);
+					}
+					else if (parameterDetails.ExtractionType === "PolygonFeatures"){
+						resultsDiv.appendChild(dojo.create("div",{
+							innerHTML:parameterDetails["LayerName"],
+							className:"racquelResultsLayerTitle"
+						}));
+						//contents += "<h4>" + parameterDetails["LayerName"] + "</h4>";
+						var count = data[possibleParamName]["Results"]["Count"];
+						var area = Math.round((data[possibleParamName]["Results"]["Area"] / 1000000)*1000)/1000;
+						var itemDiv = dojo.create("div",{
+							className:"racquelResultsLayerItem"
+						});
+						itemDiv.appendChild(dojo.create("div",{
+							innerHTML:"Total area covered by features within catchment: "+area+ " sq km"
+						}));
+						itemDiv.appendChild(dojo.create("div",{
+							innerHTML: "Total number of features within or partially within catchment: "+count
+						}));
+						var cats = data[possibleParamName]["Results"]["Categories"]
+						var categoryContent = ""
+						var sortedCats = this._propsToSortedArray(cats);
+						var numCats = sortedCats.length;
+						for (var catIdx = 0;catIdx<sortedCats.length;catIdx++){
+						//for (var category in cats){
+							//if (cats.hasOwnProperty(category)){
+							var cat = sortedCats[catIdx][0];
+							var catData = sortedCats[catIdx][1];
+							var catCount = catData["Count"];
+							var catArea = Math.round((catData["Area"]/1000000)*1000)/1000;
+								//var catcount = cats[category]["Count"];
+								//var catArea = Math.round((cats[category]["Area"]/1000000)*1000)/1000;
+								categoryContent += "<tr><td>" + cat+"</td>";
+								categoryContent += "<td>"+catCount+"</td>";
+								categoryContent += "<td>"+catArea+"</td></tr>";
+								hasCats=true;
+							//}
+						}
+						if (numCats>0){
+							var categoryFieldName = parameterDetails["CategoryField"].toProperCase();
+							itemDiv.appendChild(dojo.create("div",{
+								innerHTML:"<table border='1'><tr><th colspan=3>Summarised by category field '"+categoryFieldName+"'</th></tr>" +
+								"<tr><th>"+categoryFieldName+"</th><th>Feature count</th><th>Area (sq km)</th>" +
+								categoryContent +
+								"</table>"
+							}));
+						}
+						resultsDiv.appendChild(itemDiv);
 					}
 				}
 			}
-			
 		}
-		var div = dojo.create("div",{
-			innerHTML:contents,
-			className:"racquelResultSection"
-		});
+		div.appendChild(summaryDiv);
+		div.appendChild(resultsDiv);
+		//div.innerHTML += contents;
 		return div;
+	},
+	_propsToSortedArray:function(props){
+		var sortedClasses = [];
+		for (var dataClass in props){
+			if (props.hasOwnProperty(dataClass)){
+				sortedClasses.push([dataClass,props[dataClass]]);
+			}
+		}
+		sortedClasses.sort(dojo.hitch(this,function(a,b){
+			return a[0]-b[0];
+		}));
+		return sortedClasses;
 	},
 	_zoomSelected:function(searchIdsArray){
 		// get the selected results and zoom to their extent
@@ -614,19 +1058,34 @@ dojo.declare("racquelDijits.racquelResultManager",[dijit._Widget,dijit._Template
 		tmp.push(okToContinue);
 		var saveDialogContent = new dijit.layout.ContentPane({
 			title:				"Save Results to Shapefile",
-			doLayout:			true,
-			className: "saveDialogPane",
-			id:			"saveIntroPane" 
+			doLayout:			false,
+			id:			"saveIntroPane",
+			className: "racquelResultPane"
+			 
 		});
+		//dojo.style(saveDialogContent.domNode,"max-width:750px;");
+		//saveDialogContent.domNot
+		saveDialogContent.domNode.appendChild(dojo.create("div",{
+			innerHTML:"Export results",
+			className:"racquelResultsLayerTitle"
+		}));
 		var summaryDiv = dojo.create('div',{
-			innerHTML: "This will export selected results to shapefiles. It works best in Google Chrome<br/>"+ 
-			"(as do most things). <br/><br/>"+
-			"Other browsers should work if you have Flash installed but there<br/>"+ 
-			"may be a short pause during which your browser appears unresponsive,<br/>"+ 
-			"whilst the shapefile(s) are created. This may cause your browser to show a <br/>"+
-			"'Script Unresponsive' message - please choose continue, if so."+
-			"If this is a problem, please upgrade your browser."
-		},saveDialogContent.domNode);		
+			innerHTML: "This will export selected results to shapefiles.",
+			className: "racquelWelcomeContentParagraph"
+		});
+		dojo.addClass(summaryDiv,"racquelResultSection");
+		summaryDiv.appendChild(dojo.create('div',{
+			innerHTML: "It works best / quickest in Google Chrome. "+
+			"Other browsers should work if you have Flash installed but there "+ 
+			"may be a short pause during which your browser appears unresponsive, "+ 
+			"whilst the shapefile(s) are created. This may cause your browser to show a "+
+			"'Script Unresponsive' message - please choose continue, if so. "+
+			"If this is a problem, please upgrade your browser.",
+			className: "racquelWelcomeContentParagraph"
+		}));
+		//dojo.addClass(explainDiv,"racquelResultSection");
+		saveDialogContent.domNode.appendChild(summaryDiv);
+		//saveDialogContent.domNode.appendChild(explainDiv);		
 		saveDialogContent.startup();
 		var dialog = new dijit.Dialog({
 			title: "Save Results to Shapefile",
@@ -692,14 +1151,14 @@ dojo.declare("racquelDijits.racquelResultManager",[dijit._Widget,dijit._Template
 			var dl = new dojo.DeferredList(tmp);
 			dl.then(dojo.hitch(this, function(){
 				// exportGraphics generates the shapefile. So it is called only after the libraries are loaded.
-				this.exportGraphics(graphicsToExport);
+				this.exportGraphics(graphicsToExport,selectedIds);
 			}));
 		}
 		else {
-			this.exportGraphics(graphicsToExport);
+			this.exportGraphics(graphicsToExport,selectedIds);
 		}
 	},
-	exportGraphics:function(graphics){
+	exportGraphics:function(graphics,selectedIds){
 		// Method which actually generates and provides interface to save the shapefile. Called by
 		// _exportSelected when the required libraries have been loaded.
 		var shapewriter = new Shapefile();
@@ -734,6 +1193,14 @@ dojo.declare("racquelDijits.racquelResultManager",[dijit._Widget,dijit._Template
 				}
 			}
 		}
+		dojo.forEach(selectedIds,dojo.hitch(this,function(id){
+			var htmlFileContent = this._getResultHTML(id);
+			saver.addData({
+				filename:"racquel_result_details_"+id,
+				extension:"html",
+				datablob: {data:htmlFileContent}
+			});
+		}));
 		
 		// The fileSaver is now loaded and ready to go. If it's a native one (Chrome) then we could at this point
 		// call _saveNative to save the data directly to disk. But if it's flash-based then the actual disk write
@@ -746,7 +1213,10 @@ dojo.declare("racquelDijits.racquelResultManager",[dijit._Widget,dijit._Template
 			className: "saveDialogPane",
 			id:			"saveDialogPane" 
 		});
-		var summaryDiv = dojo.create('div',{innerHTML:"Click the button to save results"},saveDialogContent.domNode);		
+		var summaryDiv = dojo.create('div',{
+			innerHTML:"Click the button to save results",
+			className:"racquelResultSectionTitle"
+		},saveDialogContent.domNode);		
 		saveDialogContent.startup();
 		var dialog = new dijit.Dialog({
 			title: "Save results",
@@ -755,7 +1225,7 @@ dojo.declare("racquelDijits.racquelResultManager",[dijit._Widget,dijit._Template
 			onCancel:function(){
 				this.destroyRecursive();
 			},
-			className: "racquelResultPane",
+			className: "racquelWelcomeDialog",
 			autofocus: !dojo.isIE,
 			refocus: !dojo.isIE
 		});

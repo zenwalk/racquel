@@ -119,7 +119,7 @@ dojo.declare("racquelDijits.racquelResultStore",[],{
 		// i.e. it may have many results in it
 		for (var storedSearchId in jsonStoredResults){
 			// property names and so storedSearchId are strings. Arghhh!!
-			storedSearchId = parseInt(storedSearchId); 
+			// storedSearchId = parseInt(storedSearchId); 
 			if (jsonStoredResults.hasOwnProperty(storedSearchId)){
 				var jsonStoredResult = jsonStoredResults[storedSearchId]; 
 				var nativeResult = {
@@ -224,25 +224,47 @@ dojo.declare("racquelDijits.racquelResultStore",[],{
 			var catchGraphic = dojo.clone(cr['catchment']);
 			var attribs = {
 				SEARCHID: catchGraphic.attributes['searchId'],
-				TYPE: "Catchment",
-				CATCHAREA: catchGraphic.attributes['area']
+				TYPE: "Catchment"
 			}
-			if (cr.hasOwnProperty('elev')){
-				for (var elevattr in cr['elev']){
-					if (cr['elev'].hasOwnProperty(elevattr)){
-						attribs[elevattr] = cr['elev'][elevattr]
+			attribs["CATCHAREA"] = cr['totalArea']
+			var extractions = cr['extractedData'];
+			for (var extractionName in extractions){
+				if (extractions.hasOwnProperty(extractionName)){
+					var extraction = extractions[extractionName];
+					if (extraction["ExtractionType"] == "ContinuousRaster" || 
+						extraction["ExtractionType"] == "CategoricalRaster" )
+						{
+							for (var res in extraction['Results']){
+								if (extraction['Results'].hasOwnProperty(res)){
+									var resField = extractionName+"_"+res;
+									if (resField.length >10){
+										// if param name has 6 chars then the Mean property will
+										// be too long (shapefile can't have more than 10 char attrib name)
+										resField = resField.replace('_','');
+									}
+									attribs[resField] = extraction['Results'][res];
+								}
+							} 
+						}
+					// for feature based extractions we're only going to record count and length/area
+					// overall not by category
+					else if (extraction["ExtractionType"] == "PointFeatures"){
+						var resField = extractionName+"_CT";
+						attribs[resField] = extraction['Results']['Count'];
+					}
+					else if (extraction["ExtractionType"] == "LineFeatures"){
+						var resField = extractionName+"_CT";
+						attribs[resField] = extraction['Results']['Count'];
+						resField = extractionName+"_Lg";
+						attribs[resField] = extraction['Results']['Length'];
+					}
+					else if (extraction["ExtractionType"] == "PolygonFeatures"){
+						var resField = extractionName+"_CT";
+						attribs[resField] = extraction['Results']['Count'];
+						resField = extractionName+"_Ar";
+						attribs[resField] = extraction['Results']['Area'];
 					}
 				}
-			}
-			if (cr.hasOwnProperty('lcm2k')){
-				for (var lcmattr in cr['lcm2k']){
-					if (cr['lcm2k'].hasOwnProperty(lcmattr)){
-						attribs["LCM2K_"+lcmattr] = cr['lcm2k'][lcmattr]
-					}
-				}
-			}
-			if (cr.hasOwnProperty('uplength')){
-				attribs["UPLENGTH"] = cr['uplength']
 			}
 			catchGraphic.setAttributes(attribs);
 			outputArray.push(catchGraphic);

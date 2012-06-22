@@ -15,15 +15,15 @@
 		
 		<div style="height:15%">
 			<span style="width:40%;">
-				RACQUEL Results 
+				Manage stored results: 
 			</span>
 			<span>
-			<input dojotype = 'dijit.form.Button' title='Select all results' label='All' dojoAttachPoint='_btnSelectAll'>
-			<input dojotype = 'dijit.form.Button' title='Clear selection' label='None' dojoAttachPoint='_btnSelectNone'>
-			<input dojotype = 'dijit.form.Button' title='Delete selected results' label='Delete' dojoAttachPoint='_btnDeleteSelected'>
+			<input dojotype = 'dijit.form.Button' title='Select all results in the grid' label='Select All' dojoAttachPoint='_btnSelectAll'>
+			<input dojotype = 'dijit.form.Button' title='Clear selection' label='Select None' dojoAttachPoint='_btnSelectNone'>
+			<input dojotype = 'dijit.form.Button' title='Delete selected results from the grid' label='Delete Selected' dojoAttachPoint='_btnDeleteSelected'>
 			<!--<input dojotype = 'dijit.form.Button' title='Zoom to selected results' label='Zoom' dojoAttachPoint='_btnZoomSelected'>-->
-			<input dojotype = 'dijit.form.Button' title='Save selected results' label='Save' dojoAttachPoint='_btnSaveSelected'>
-			<input dojotype = 'dijit.form.Button' title='Export selected results' label='Export' dojoAttachPoint='_btnExportSelected'>
+			<!--<input dojotype = 'dijit.form.Button' title='Save selected results' label='Save' dojoAttachPoint='_btnSaveSelected'>-->
+			<input dojotype = 'dijit.form.Button' title='Export selected results to shapefile' label='Export Selected' dojoAttachPoint='_btnExportSelected'>
 			</span>
 		</div>
 			<!-- grid here -->
@@ -38,7 +38,7 @@
                             River
                         </th>
                         <th field="Location" formatter="_getGridCoords" width="75px">
-                            Coords
+                            Location
                         </th>
                         <th field="Site" formatter="_getGridYesNoText" width="30px">
                             Site?
@@ -56,7 +56,7 @@
                             Details
                         </th>
 						<th field="SearchId" formatter="_getZoomToButton" width="100%" canSort="false">
-							Zoom
+							Zoom to
 						</th>
                     </tr>
                 </thead>

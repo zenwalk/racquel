@@ -1,5 +1,5 @@
 dojo.provide("racquelDijits.siteSearch");
-dojo.require("esri.tasks.identify");
+//dojo.require("esri.tasks.identify");
 dojo.declare("racquelDijits.siteSearch",[],{
 	constructor:function(params){
 		params = params || {};

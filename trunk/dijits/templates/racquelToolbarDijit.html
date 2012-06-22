@@ -1,50 +1,398 @@
 <div id="racquelToolbar" style="position:absolute;top:0px;left:0px;z-index:999;">
-	<div id="racquel-tools-container" dojoType="dijit.Toolbar" >
-		<!--<img class="sidebar-arrow" src="../images/arrow-left.png" />-->
-		<div id="racquel-tools-div">
-			<span class="sidebar-label">RACQUEL Toolbar</span>	
-			<div dojoType="dijit.form.Button" id="selectVars" iconClass="selectVarsIcon" 
-				dojoAttachEvent="onClick:showVarChooser" showLabel="true">Variables</div>
-			<div dojoType="dijit.form.ToggleButton" id="runInteractive" dojoAttachPoint = "_btnToggleInteractive"
-				iconClass="interactiveSearchIcon" 
-				dojoAttachEvent="onClick:toggleInteractiveSearch" showLabel="true">InteractiveSearch</div>
-			<div dojoType="dijit.form.Button" id="runBatch" iconClass="batchSearchIcon" 
-				dojoAttachEvent="onClick:activateBatchSearch" showLabel="true">Batch search</div>
-							
-		</div>
-	</div>
-	<div dojotype = "dijit.Dialog" dojoAttachPoint = "_racquelWelcomeDialog" title="Welcome to RACQUEL">
-		<div dojotype = "dijit.layout.ContentPane" class = "outlinedMarginPane" dojoAttachPoint = "_racquelWelcomeContent">
-			<div>Welcome to RACQUEL - the River and Catchment Query and Extraction Layer</div>
-			<div>RACQUEL enables you to run three types of query:
-			<div><ul>
-				<li>
-					At-site searches. Find out what is at the site of interest. (Similar to the Identify tool in a GIS)
-				</li>
-				<li>
-					Route searches. For a site on the river network, identify the source and tidal mouth points. Create
-					routes between the source and your site, and between the site and the mouth. Retrieves the coordinates
-					of the source and tidal mouth, and the distance along the stream between them
-				</li>
-				<li>
-					Catchment searches. Defines the catchment (watershed) draining to the site. Can also summarise
-					the elevation, land cover (Land Cover Map 2000), and total upstream river length within the catchment
-				</li>
-			</ul>
-			</div>
-			</div>
-			<div>
-			All searches can be run in interactive or batch mode. To run an interactive search, first click "Variables"
-			in the toolbar then choose which searches you want to run. Then Click the Interactive Search tool, zoom in
-			to the site of interest, and click on the map.
-			</div>
-			<div>
-			To run a batch search, click the Batch Search tool. You'll need a modern web browser like Firefox or Chrome.
-			Prepare a CSV file containing the sites of interest, as described in the tool. Drag it into the tool and press go.
-			</div>
-		</div>
-		<div dojotype = "dijit.layout.ContentPane" class = "outlinedMarginPane" dojoAttachPoint = "_racquelReloadContent">
-			
-		</div>
-	</div>
+    <div id="racquel-tools-container" dojoType="dijit.Toolbar">
+        <!--<img class="sidebar-arrow" src="../images/arrow-left.png" />-->
+        <div id="racquel-tools-div">
+            <span id="racquel-tools-label">RACQUEL Toolbar</span>
+            <div dojoType="dijit.form.Button" id="selectVars" iconClass="selectVarsIcon" dojoAttachEvent="onClick:showVarChooser" showLabel="true" title="Select which variables will be extracted when you run an interactive search">
+                Variables
+            </div>
+            <div dojoType="dijit.form.ToggleButton" id="runInteractive" dojoAttachPoint = "_btnToggleInteractive" iconClass="interactiveSearchIcon" dojoAttachEvent="onClick:toggleInteractiveSearch" showLabel="true" title="Run a RACQUEL search based on clicking a river on the map">
+                Interactive Search
+            </div>
+            <div dojoType="dijit.form.Button" id="runBatch" iconClass="batchSearchIcon" dojoAttachEvent="onClick:activateBatchSearch" showLabel="true" title="Open the Batch Search dialog to run searches based on coordinates in a CSV file">
+                Batch search
+            </div>
+            <div dojoType="dijit.form.Button" id="showHelp" iconClass="helpIcon" showLabel="false" dojoAttachEvent="onClick:showHelp" title="Display the introductory dialog">
+            </div>
+        </div>
+    </div>
+    <div dojotype = "dijit.Dialog" dojoAttachPoint = "_racquelWelcomeDialog" class = "racquelWelcomeDialog" title="Welcome to RACQUEL">
+        <div dojotype = "dijit.layout.ContentPane" class = "outlinedMarginPane" dojoAttachPoint = "_racquelWelcomeContent"
+		style="max-width:650px;">
+            <div id="racquelWelcomeContentTitle">
+                Welcome to RACQUEL - the River and Catchment Query and Extraction Layer
+            </div>
+            <div dojotype="dijit.layout.TabContainer" dojoAttachPoint="_racquelWelcomeTabs" style="height:300px;width:650px;">
+                <div dojotype="dijit.layout.ContentPane" title="Introduction" dojoAttachPoint="_racquelWelcomeTabIntro">
+                    <div class="racquelWelcomeContentItem">
+                    	<div class="racquelWelcomeContentParagraph">
+                        RACQUEL is a web-based GIS tool enabling the exploration and querying of data relating 
+                        to river networks and catchments (watersheds). It lets you derive river routes and drainage 
+						catchments and extract data based on these from other datasets.
+						</div>
+                    </div>
+                    <div class="racquelWelcomeContentItem">
+                    	<div class="racquelWelcomeContentParagraph">
+                        RACQUEL can be deployed against a variety of different GIS datasets to give 
+                        an easy way of interrogating and summarising these data.
+						</div>
+						<div class="racquelWelcomeContentParagraph">
+                        <div dojoAttachPoint = "_racquelWelcomeStatus" title="Help!" style="display:none">
+                            <!-- If the dialog is displayed after full loading then information regarding
+                            the configured services can display here-->
+                        </div>
+						</div>
+                    </div>
+                    <div id="racquelWelcomeLogo" class="racquelWelcomeContentItem">
+					</div>
+                    <div class="racquelWelcomeContentItem">
+                    	<div class="racquelWelcomeContentParagraph">
+                        RACQUEL is written and maintained by Harry Gibson, CEH Wallingford
+						</div>
+                    </div>
+					<div class="racquelWelcomeContentItem">
+                        <div class="racquelWelcomeContentParagraph">
+						It is copyright &copy; Natural Environment Research Council (NERC) 2012
+						</div>
+					</div>
+                </div>
+                <div dojotype="dijit.layout.ContentPane" title="Help" dojoAttachPoint = "_racquelWelcomeTabHelp">
+                    <div class="racquelWelcomeContentHeader">
+                        What does RACQUEL do?
+                    </div>
+                    <div class="racquelWelcomeContentItem">
+                        RACQUEL enables you to run three types of query against the datasets it is 
+                        configured with:
+                           <ul>
+							<div class="racquelWelcomeContentParagraph">    
+								<li>
+                                    At-site searches. This lets you find out what is at the site of interest - like sticking a pin 
+                                    in the map and reading off the value. (Similar to the Identify tool in a GIS).
+                                </li>
+								</div>
+								<div class="racquelWelcomeContentParagraph">
+                                <li>
+                                    <p>
+									Route searches. This lets you find out about the river network that a site lies on. 
+                                    From the search location, RACQUEL will identify the nearest location that is precisely on the  
+                                    river network. Then it will identify the source point - the furthest upstream point on the river - 
+                                    and the tidal limit point - where the river becomes an estuary. Finally it will identify the 
+                                    river channel route between the source and your site, and between the site and the tidal limit.
+									</p>
+									<p>
+                                    Route searches will only work if your input point is on, or very close to, the river network.
+                                    So, make sure you zoom right in and click carefully!
+									</p><p>
+                                    The route identified will always reflect the "primary" channel. So if there is a bifurcation
+                                    in the river, the main channel will be identified.
+									</p>
+
+                                </li>
+								</div>
+								<div class="racquelWelcomeContentParagraph">
+                                <li>
+                                    <div class="racquelWelcomeContentParagraph">
+									Catchment searches. This calculates the catchment (also known as the watershed) draining to the site.
+                                    This represents all areas from which a raindrop landing on the ground will end up passing through
+                                    the site queried.
+                                    </div>
+									<div class="racquelWelcomeContentParagraph">
+									Once the catchment has been calculated, other data can be summarised within the area of the catchment,
+                                    to give (for example) the average elevation, or the proportion of the catchment covered by forest.
+									</div>
+                                </li>
+								</div>
+								</ul>
+								<div class="racquelWelcomeContentParagraph">
+                        All of these searches can be run in interactive mode (where you click on a river to 
+                        initiate a search) or batch mode (where you input a CSV file containing search 
+                        coordinates).
+						</div>
+                    </div>
+                    <div class="racquelWelcomeContentHeader">
+                        Interactive searches
+                    </div>
+                    <div class="racquelWelcomeContentItem">
+                        <div class="racquelWelcomeContentParagraph">
+						To run an interactive search, first click "Variables" in the toolbar then choose which searches you want to run.
+                        If you choose to extract a catchment, then also select which variables you would like to summarise
+                        within the catchment. Descriptions of these extracted variables, if available, will be displayed
+						if you hover the mouse over the check boxes.
+                        </div>
+						<div class="racquelWelcomeContentParagraph">
+						Then click the Interactive Search tool - the mouse cursor will change to a cross-hair symbol
+						over the map. Zoom in to the site of interest, and click on the map, near to or on a river
+						if you are running route and / or catchment searches. 
+                        </div>
+						<div class="racquelWelcomeContentParagraph">
+						When you click the mouse cursor will change to an hourglass symbol whilst the search runs.
+						When the search completes the result will appear as a new row in the Result Manager window.
+						</div>
+                    </div>
+                    <div class="racquelWelcomeContentHeader">
+                        Batch searches
+                    </div>
+                    <div class="racquelWelcomeContentItem">
+                        <div class="racquelWelcomeContentParagraph">
+						To run a batch search, first prepare a CSV file containing the sites of interest.  
+                        This file should contain six columns: ID, X, Y, SITE, ROUTE, and CATCHMENT.  
+                        </div>
+						<div class="racquelWelcomeContentParagraph">
+						Each row should contain a unique name in the ID field and the X and Y fields should contain 
+                        the site coordinates in British National Grid format. 
+                        The remaining three fields should contain 
+                        "YES" or "NO" to choose which three search types you want.
+						</div> 
+                        <div class="racquelWelcomeContentParagraph">
+						If any rows contain "YES" for catchment, then use the variable chooser as above to select 
+                        which variables you want to be extracted for the catchments (the same will be done for all catchments). 
+                        </div>
+						<div class="racquelWelcomeContentParagraph">
+						Click Batch Search on the toolbar. You'll need a modern web browser like Firefox or Chrome. 
+                        Drag the file into the labelled area in the tool and the input should appear in a grid.   
+                        Scroll through the grid to check that you're happy with all the contents, and press go.
+						</div>
+						<div class="racquelWelcomeContentParagraph">
+						Searches will then proceed as they do when you run an Interactive search - results will appear 
+						in the Result Manager as they are created. A message will be displayed when all the searches
+						have completed. 
+						</div>
+                    </div>
+                    <div class="racquelWelcomeContentHeader">
+                        Results
+                    </div>
+                    <div class="racquelWelcomeContentItem">
+                       <div class="racquelWelcomeContentParagraph">
+					    Results from both interactive and batch searches will appear in the Result Manager window. 
+                        You can view each result on the map (if you have done a route and / or catchment search) by 
+                        ticking the relevant box.
+                        </div>
+						<div class="racquelWelcomeContentParagraph">
+						You can zoom the map to the full extent of a result by pressing the Zoom button.
+                        </div>
+						<div class="racquelWelcomeContentParagraph">
+						You can view the results themselves by pressing the Show button in the grid.
+						</div>
+                    </div>
+                    <div class="racquelWelcomeContentHeader">
+                        Saving your results
+                    </div>
+                    <div class="racquelWelcomeContentItem">
+                        <div class="racquelWelcomeContentParagraph">
+						If you have a modern browser then any results showing in the Result Manager will be saved 
+                        automatically when you leave the RACQUEL web page. When you return, this welcome dialog 
+                        will offer to restore the results for you. You can delete any you don't need by 
+                        selecting them in the grid and pressing Delete Selected.
+                        </div>
+                    </div>
+                    <div class="racquelWelcomeContentHeader">
+                        Exporting your results to another program
+                    </div>
+                    <div class="racquelWelcomeContentItem">
+                        <div class="racquelWelcomeContentParagraph">
+                            Finally you can export your results to shapefiles for use in GIS programs. 
+                            This is most useful if you need a shapefile giving the course of a particular river  
+                            to add to a map, or if you want to use RACQUEL to extract a catchment for further 
+                            analysis in your studies.
+                        </div>
+                        <div class="racquelWelcomeContentParagraph">
+                            Exporting to shapefiles works best in the Google Chrome browser. It will work in other 
+                            browsers such as Firefox, but Chrome is much quicker. 
+                        </div>
+                        <div class="racquelWelcomeContentParagraph">
+                            Select the results you want to save in the Result Manager, and press Export, then 
+                            follow the steps shown.
+                        </div>
+                        <div class="racquelWelcomeContentParagraph">
+                            Depending on what results you selected, the number of shapefiles exported will vary: 
+                            there will be a maximum of three, one each of points, lines, and polygons.  
+                            The points shapefile will contain the input locations of the searches and (where a river 
+                            routing search was done) the 
+                            locations snapped onto the river network, as well as the source and tidal limit locations.
+                            If there were any At-Site searches run
+                            then these results will be given as attributes on the input point.
+                        </div>
+                        <div class="racquelWelcomeContentParagraph">
+                            The lines shapefile will contain the routes between the source and search location, and 
+                            between the search location and the tidal limit.
+                        </div>
+                        <div class="racquelWelcomeContentParagraph">
+                            The polygons shapefile will contain the catchment outline(s). These will contain as attributes 
+                            the data that were extracted for the catchments.
+                        </div>
+						<div class="racquelWelcomeContentParagraph">
+                            An HTML file containing a summary of each exported result will also be included in the export.
+							<!--The polygons shapefile will contain the catchment outline(s). These will contain as attributes 
+                            the data that were extracted for the catchments.-->
+                        </div>
+                    </div>
+                    <div class="racquelWelcomeContentHeader">
+                        What data does RACQUEL contain?
+                    </div>
+                    <div class="racquelWelcomeContentItem">
+                        <div class="racquelWelcomeContentParagraph">
+                            RACQUEL is designed as a set of tools which can be configured to extract data 
+                            (for the At-Site and Catchment searches) from almost any GIS dataset. The data  
+                            that you see available for extraction merely reflect what this particular copy of 
+                            RACQUEL	has been configured with.
+                        </div>
+                        <div class="racquelWelcomeContentParagraph">
+                            It is important to note that the map and any overlays shown on it are essentially provided as a backdrop to give 
+                            context to your searches. They do not necessarily reflect the data which RACQUEL works with. 
+							(Although, the rivers shown 
+                            on the map are the same as those that RACQUEL uses or else it would be hard to search in 
+                            the right place!) RACQUEL is intended as a tool
+                            for interrogating and extracting data, to be used in conjunction with a map, rather than as a mapping tool itself. 
+							If a dataset you require is shown on 
+							the map but not available for extraction, or vice versa, then you will need to ask the administrator 
+							to alter the GIS services RACQUEL is using.
+                        </div>
+                    </div>
+                    <div class="racquelWelcomeContentHeader">
+                        How does RACQUEL work?
+                    </div>
+                    <div class="racquelWelcomeContentItem">
+                        <div class="racquelWelcomeContentParagraph">
+                            Please click <span dojoAttachEvent="onclick:showAdvancedInfo" style="text-decoration:underline;"> here </span>
+                            if you would like to see technical information about how RACQUEL works.
+                        </div>
+                    </div>
+                </div>
+                
+            </div>
+        </div>
+        <div dojotype = "dijit.layout.ContentPane" class = "outlinedMarginPane" dojoAttachPoint = "_racquelReloadContent"
+		style="max-width:650px">
+        </div>
+		<div dojotype="dijit.layout.ContentPane" dojoAttachPoint = "tabTechInfo" title="Technical Information" style="display:none;">
+                    <div class="racquelWelcomeContentHeader">
+                        What is RACQUEL?
+                    </div>
+                    <div class="racquelWelcomeContentItem">
+                        RACQUEL is a set of Javascript modules that are intended to be used in conjunction 
+                        with a map page written in the ESRI Javascript API. The RACQUEL tools can be added to  
+                        any such map page, hence the "L" for "Layer" in the title - the RACQUEL functions 
+                        are independent of the layout of the map page, or of what layers are shown on the map. RACQUEL does
+						at present assume that the map contains a representation of the same rivers that it uses for searching and
+						that the map and data are in British National Grid format (although other projections with units of metres
+						should probably work).
+                    </div>
+                    <div class="racquelWelcomeContentHeader">
+                        How does it work?
+                    </div>
+                    <div class="racquelWelcomeContentItem">
+                        RACQUEL works by communicating with ArcGIS Server which serves the data that RACQUEL 
+                        queries, and which does the main GIS analysis that is involved in RACQUEL searches.  
+                        Several GIS services are required and the locations of these are configured in a single 
+                        file.
+                    </div>
+                    <div class="racquelWelcomeContentHeader">
+                        At-site searches
+                    </div>
+                    <div class="racquelWelcomeContentItem">
+                        At-site searches are simply a wrapper for the ESRI Javascript API <a href="http://help.arcgis.com/en/webapi/javascript/arcgis/help/jsapi/identifytask.htm" target="_blank">Identify Task</a>. 
+						The location of the service is defined in the configuration file.
+                    </div>
+                    <div class="racquelWelcomeContentHeader">
+                        River routing searches
+                    </div>
+                    <div class="racquelWelcomeContentItem">
+                        <div class="racquelWelcomeContentParagraph">
+						Route searches use a Network Analysis service on the GIS server and the ESRI Javascript 
+                        API <a href="http://help.arcgis.com/en/webapi/javascript/arcgis/help/jsapi/routetask.htm" target="_blank">Route Task</a>. The Network Analysis service is configured on a network 
+                        dataset that contains river lines as "edges" and source and mouth locations as "nodes". 
+                        Each river reach is encoded with the upstream and downstream node identifier and each 
+                        node is encoded with the ultimate source and sink nodes.
+                        </div>
+						<div class="racquelWelcomeContentParagraph">
+                        On initiating a search the nearest river line is located using a spatial SQL query (it is
+                        not easy to identify the nearest single feature using the standard ESRI tasks). From this 
+                        the source and mouth nodes are identified from the information encoded on it and those 
+                        points retrieved. Finally the  
+                        Route Task is used to find the route between the source point and the site, and between the 
+                        site and the mouth point.
+						</div> 
+                        <div class="racquelWelcomeContentParagraph">
+                        In this way RACQUEL can define river routes based on a variety of river network datasets, 
+                        although these must be processed to encode them with the information described. A Network Analysis 
+						service is published based on the network dataset along with a service giving access to the river line 
+						features (via the Query Task). The location of these services and the fields 
+						where this information is recorded are defined in the configuration file.
+						</div> 
+                    </div>
+                    <div class="racquelWelcomeContentHeader">
+                        Catchment searches and extractions
+                    </div>
+                    <div class="racquelWelcomeContentItem">
+                        <div class="racquelWelcomeContentParagraph">
+						Catchment searches use a Server Object Extension (SOE) that allows the GIS server to expose 
+                        catchment definition as a GIS service. A map service is configured which contains layers 
+                        for the data required for catchment definition (Flow Direction and Flow Accumulation)  
+                        along with those layers which are to be made available for the extraction of catchment 
+                        statistics. The SOE is enabled on this service. RACQUEL then simply makes calls to this  
+                        SOE task. 
+						</div>
+                        <div class="racquelWelcomeContentParagraph">
+						The SOE itself is documented <a href="http://code.google.com/p/watershed-soe/" target="_blank">here</a>. 
+                        </div>
+						<div class="racquelWelcomeContentParagraph">
+						In this way RACQUEL can define catchments based on a variety
+                        of different Digital Terrain Models, and can extract statistics for these catchments
+                        from almost any GIS dataset. The watershed created will reflect the DTM-derived datasets that are  
+						included in the configured service. The type of extraction performed (e.g. whether a raster is 
+						summarised by class or statistically; what field a feature layer is summarised by) depends on the 
+						layer configuration in the source map document. 
+						</div>
+						<div class="racquelWelcomeContentParagraph">
+						The location of the GIS service with the SOE enabled on it is defined in the configuration 
+						file.
+						</div>
+                    </div>
+                    <div class="racquelWelcomeContentHeader">
+                        Shapefile Export
+                    </div>
+                    <div class="racquelWelcomeContentItem">
+                        <div class="racquelWelcomeContentParagraph">
+						Exporting results to shapefiles is done by creating the binary shapefiles directly in the 
+                        web browser, from the ESRI Javascript API Graphics that comprise the results. The
+                        shapefiles are created using the HTML5 APIs for binary data creation and saving, in
+                        browsers where these are available, or by using emulation code for these in other
+                        browsers.
+						</div>
+                        <div class="racquelWelcomeContentParagraph">
+						The code for creating the shapefiles, called JS2Shapefile, is documented <a href="https://code.google.com/p/js2shapefile/" target="_blank">here</a>
+                        and can be applied to any ESRI Javascript API graphics.
+						</div>
+                        <div class="racquelWelcomeContentParagraph">
+						Because browsers that do not support the HTML5 File Creation APIs (which currently means 
+                        anything other than Google Chrome) create the shapefiles using an extra "layer" of code  
+                        emulation, this means that creating shapefiles can be slow in such browsers and may 
+                        trigger a warning that the code has become unresponsive.  This is due to the large amount of  
+						looping in the code as the vertices of the features are written and is therefore unavoidable 
+						without losing some of the detail in the exported file. The best solution is to upgrade 
+                        your browser!
+						</div>
+                    </div>
+                    <div class="racquelWelcomeContentHeader">
+                        Other notable points
+                    </div>
+                    <div class="racquelWelcomeContentItem">
+                        <div class="racquelWelcomeContentParagraph">
+						As well as the shapefile export functionality, RACQUEL uses advanced HTML5 
+						techniques in two 
+                        other ways which mean it may not work as intended in older web browsers. 
+                        </div>
+						<div class="racquelWelcomeContentParagraph">
+						The first is 
+                        the File Reading API which is used to read a CSV file for the batch search. If this is  
+                        not available then batch searches will not be possible. 
+                        </div>
+						<div class="racquelWelcomeContentParagraph">
+						The second is the Local Storage 
+                        API which is used to store results between sessions. If this is not available, you will 
+                        lose your results when you leave the RACQUEL page.
+						</div>
+                    </div>
+                </div>
+    </div>
 </div>

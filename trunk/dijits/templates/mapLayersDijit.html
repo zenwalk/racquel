@@ -1,16 +1,23 @@
 <div class = "maplayerlist-container">
 	<div dojoType = "dijit.layout.ContentPane" dojoAttachPoint = "layerListPane">
-		<div dojoAttachPoint = "_dynamicLayersDiv" class="_dynamicLayersDiv layers_rounded_corners">
-			Dynamic map layers:
+		<div style="height:100%">
+		<div dojoAttachPoint = "_dynamicLayersDiv" class="mapDijitSection layers_rounded_corners" style="max-height:25%;">
+			Map overlays:
 			<div dojoAttachPoint = "layersList">
 				<!-- Dynamic Layer checkboxes will be inserted here -->
 			</div> 
 		</div>
-		<div dojoAttachPoint = "_baseLayersDiv" class="_baseLayersDiv layers_rounded_corners">
-			Base (tiled) layers:
+		<div dojoAttachPoint = "_baseLayersDiv" class="mapDijitSection layers_rounded_corners" style="max-height:15%;">
+			Base / backdrop maps:
 			<div dojoAttachPoint = "baseList">
 				<!-- Tiled map service checkboxes will be inserted here -->
 			</div>
 		</div>
+		<div class="mapDijitSection layers_rounded_corners" style="max-height:600px;overflow:auto;"  >
+				<div dojoAttachPoint = "legendArea" style="max-height:100%;"> 
+				<!-- Legend dijit will render here -->
+				</div>
+		</div>
+	</div>
 	</div>
 </div>

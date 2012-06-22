@@ -31,10 +31,10 @@ dojo.declare("racquelDijits.racquelToolbarDijit",[dijit._Widget, dijit._Template
 	racquelControlDijit: null,
 	racquelBatchDijit: null,
 	racquelMapSymbols: new racquelDijits.racquelMapSymbols(),
-	racquelServiceConfig: new racquelDijits.racquelServiceConfig(),
+	racquelServiceConfigObject: new racquelDijits.racquelServiceConfig(),
 	
 	constructor:function(params){
-		// racquelToolbar is interested in two paramaters that determine its behaviour: map, and resultDiv
+		// racquelToolbar is interested in two parameters that determine its behaviour: map, and resultDiv
 		params = params || {};
 		// first set up the things we always need regardless of parameters
 		// Result store: load results from last time, if there are any and the browser supports it
@@ -48,6 +48,13 @@ dojo.declare("racquelDijits.racquelToolbarDijit",[dijit._Widget, dijit._Template
 		// we always need site, route, and catchment search dijits, but the site one can be instantiated with or 
 		// without a map.
 		// routeSearch and catchmentSearch do not care about map
+		this.racquelServiceConfig = this.racquelServiceConfigObject[params.serviceConfigName];
+		this.racquelInteractiveSettings = new racquelDijits.racquelSearchSettings({
+		}); // new object will be set to use all
+		var extractionDef = 
+			this.racquelInteractiveSettings.getExtractionParameters(this.racquelServiceConfig);
+				
+
 		this.racquelRouteDijit = new racquelDijits.routeSearch({
 			serviceConfig: this.racquelServiceConfig
 		});
@@ -70,9 +77,6 @@ dojo.declare("racquelDijits.racquelToolbarDijit",[dijit._Widget, dijit._Template
 				serviceConfig:this.racquelServiceConfig
 			});
 			this.racquelSearchDijit = new racquelDijits.racquelSearchDijit({map:map, racquelToolbar:this});
-			this.racquelInteractiveSettings = new racquelDijits.racquelSearchSettings({
-				serviceConfig: this.racquelServiceConfig
-			}); // new object will be set to use all
 			this.racquelControlDijit = new racquelDijits.racquelControlDijit({racquelToolbar:this});
 			this.racquelControlDijit.startup();
 			// decide whether to render the resultGrid as a floating window or in a fixed container
@@ -177,6 +181,18 @@ dojo.declare("racquelDijits.racquelToolbarDijit",[dijit._Widget, dijit._Template
 		this.getLoadResultsContent();
 		this._racquelWelcomeDialog.show();
 	},
+	showHelp:function(){
+		this._racquelWelcomeTabs.selectChild(this._racquelWelcomeTabHelp);
+		this.getContinueSessionContent();
+		this._racquelWelcomeDialog.show();
+	},
+	showAdvancedInfo:function(){
+		var infoTabIdx = this._racquelWelcomeTabs.getIndexOfChild(this.tabTechInfo);
+		if (infoTabIdx == -1) {
+			this._racquelWelcomeTabs.addChild(this.tabTechInfo);
+		}
+		this._racquelWelcomeTabs.selectChild(this.tabTechInfo);
+	},
 	_confirmUnload:function(){
 		if (this.racquelResultStore.getSearchIds().length>0 && window.localStorage){
 				//var save = confirm("Bye! Would you like to save your results for next time?");
@@ -189,21 +205,23 @@ dojo.declare("racquelDijits.racquelToolbarDijit",[dijit._Widget, dijit._Template
 				// no results in the grid... maybe there were some from last time and user has now deleted them
 				// update the localStorage to reflect this
 				//alert("Bye!");
-			//	if (window.localStorage){
-			//		window.localStorage.removeItem("racquelPersistedResults");
-			//	}
+				if (window.localStorage){
+					window.localStorage.removeItem("racquelPersistedResults");
+				}
 			}
 	},
 	getLoadResultsContent: function(){
 		var reloadPane = new dijit.layout.ContentPane({
-				
 		});
 		if (this.canSaveResults && window.localStorage.getItem("racquelPersistedResults")) { 
 			console.log("RACQUEL: Persisted results found");
 			var content = ("It seems like you've been here before! "+
 				"RACQUEL has found some results stored from a previous visit. Please click Reload "+
 				"if you'd like to reload these results, or New Session if you'd like to discard them.");
-			reloadPane.set('content',content);
+			reloadPane.set('content',dojo.create("div",{
+				innerHTML:content,
+				className:"racquelWelcomeContentItem"
+			}));
 			var yesButton = new dijit.form.Button({
 				label: "Reload",
 				onClick: dojo.hitch(this, function(){
@@ -221,9 +239,6 @@ dojo.declare("racquelDijits.racquelToolbarDijit",[dijit._Widget, dijit._Template
 			noButton.startup();
 			dojo.place(yesButton.domNode,reloadPane.domNode,"last");
 			dojo.place(noButton.domNode,reloadPane.domNode,"last");
-			//reloadPane.appendChild(yesbutton.domNode);
-			//reloadPane.appendChild(nobutton.domNode);
-			//this._racquelWelcomeDialog.appendChild(reloadPane);
 		}
 		else {
 			var content = "No saved results found! Press New Session to start using RACQUEL";
@@ -237,10 +252,29 @@ dojo.declare("racquelDijits.racquelToolbarDijit",[dijit._Widget, dijit._Template
 			shooButton.startup();
 			dojo.place(shooButton.domNode,reloadPane.domNode,"last");
 		}
+		reloadPane.set("className","outlinedMarginPane");
 		reloadPane.startup();
 		this._racquelReloadContent.set('content',reloadPane.domNode);
-		//dojo.place(reloadPane.domNode,this._racquelReloadContent.domNode);
 	},
+	getContinueSessionContent:function(){
+		var reloadPane = new dijit.layout.ContentPane({
+		});
+		var content = "Press OK to return to your session ";
+		reloadPane.set('content',dojo.create("div",{
+			innerHTML:content,
+			className:"racquelWelcomeContentItem"
+		}));
+		var okButton = new dijit.form.Button({
+			label: "OK",
+			onClick: dojo.hitch(this, function(){
+				this._racquelWelcomeDialog.hide();
+			})
+		});
+		okButton.startup();
+		dojo.place(okButton.domNode,reloadPane.domNode,"last");
+		this._racquelReloadContent.set('content',reloadPane.domNode);
+	},
+	
 	_loadResults:function(){
 		// NOTE: localStorage does not retain functions on objects (some json rule), 
 		// so the graphics do not have functions like setAttributes when they are reloaded.
